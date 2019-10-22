@@ -1,0 +1,6 @@
+data
+*.pb
+
+.idea/
+__pycache__/
+
