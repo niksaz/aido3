@@ -9,9 +9,9 @@ WORKDIR /workspace
 # if you have more file use the COPY command to move them to the workspace
 # IMPORTANT: This should fail if "frozen_graph.pb" does not exist.
 # This file will contain a learned model which the agent should execute.
-COPY graph.pb .
-COPY . .
-
+COPY models/graph.pb .
+COPY requirements.txt .
+COPY src/ src/
 
 # here, we install the requirements, some requirements come by default
 # you can add more if you need to in requirements.txt
@@ -22,4 +22,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN apt update && apt install -y libsm6 libxext6
 
 # CMD python solution.py
-ENTRYPOINT ["python", "imitation_agent.py"]
+ENTRYPOINT ["python", "src/imitation/imitation_agent.py"]
