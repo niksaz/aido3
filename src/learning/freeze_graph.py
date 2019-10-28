@@ -2,6 +2,7 @@
 
 import os
 from tensorflow.python.tools import freeze_graph
+import tensorflow as tf
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -23,7 +24,7 @@ def main():
         os.makedirs(directory)
 
     # define the checkpoint/weights you want to freeze inside the graph
-    input_checkpoint = os.path.join(os.getcwd(), model_name, 'tensorflow_logs', 'train-900')
+    input_checkpoint = tf.train.latest_checkpoint('{}/tensorflow_logs'.format(model_name))
 
     # define the name of the prediction output node
     # This name can be easily extracted using Tensorboard. In GRAPHS tab of Tensorboard, check the inputs of Loss scope.

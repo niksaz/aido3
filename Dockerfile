@@ -1,4 +1,4 @@
-FROM duckietown/challenge-aido_lf-template-tensorflow:aido2
+FROM duckietown/challenge-aido_lf-template-tensorflow:daffy
 
 # let's create our workspace, we don't want to clutter the container
 RUN rm -r /workspace; mkdir /workspace

@@ -13,8 +13,8 @@ from cnn_predictions import fun_img_preprocessing
 
 @dataclass
 class ImitationAgentConfig:
-    pwm_left_interval: Tuple[int, int] = (0.2, 0.3)
-    pwm_right_interval: Tuple[int, int] = (0.2, 0.3)
+    # pwm_left_interval: Tuple[int, int] = (0.2, 0.3)
+    # pwm_right_interval: Tuple[int, int] = (0.2, 0.3)
     current_image: np.ndarray = np.zeros((480, 640))
 
 
@@ -35,7 +35,7 @@ class ImitationAgent:
         self.config.current_image = jpg2rgb(camera.jpg_data)
 
     def compute_action(self, observation):
-        frozen_model_filename = "graph.pb"
+        frozen_model_filename = "frozen_graph.pb"
 
         # We use our "load_graph" function
         graph = load_graph(frozen_model_filename)
@@ -62,12 +62,13 @@ class ImitationAgent:
             return action
 
     def on_received_get_commands(self, context: Context):
-        l, u = self.config.pwm_left_interval
+        # l, u = self.config.pwm_left_interval
         # pwm_left = np.random.uniform(l, u)
-        l, u = self.config.pwm_right_interval
+        # l, u = self.config.pwm_right_interval
         # pwm_right = np.random.uniform(l, u)
         pwm_left, pwm_right = self.compute_action(self.config.current_image)
-
+        pwm_left = float(np.clip(pwm_left, -1, +1))
+        pwm_right = float(np.clip(pwm_right, -1, +1))
         grey = RGB(0.0, 0.0, 0.0)
         led_commands = LEDSCommands(grey, grey, grey, grey, grey)
         pwm_commands = PWMCommands(motor_left=float(pwm_left),

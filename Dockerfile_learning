@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:latest-gpu-py3
+FROM tensorflow/tensorflow:1.13.1-gpu-py3
 
 # let's create our workspace, we don't want to clutter the container
 RUN rm -r /workspace; mkdir /workspace
