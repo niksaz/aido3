@@ -18,7 +18,7 @@ def main():
 
     # define which optimizer you want to use (e.g "Adam", "GDS"). For "Adam" and "GDS" this script will take care the rest.
     # ATTENTION !! If you want to choose a different optimizer from these two, you will have to add it in the training functions.
-    optimizer = "Adam"
+    optimizer = "GDS"
 
     # define learning rate (e.g 1E-3, 1E-4, 1E-5):
     learning_rate = 1E-4

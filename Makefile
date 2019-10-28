@@ -35,9 +35,6 @@ learn-regular:
 				python src/cnn_training_tensorflow.py; \
 				python src/freeze_graph.py;
 
-regular_copy_for_submission:
-				cp learned_models/graph.pb ../imitation_agent;
-
 # ==================== FOR SUBMISSION ====================
 
 repo=aido3

@@ -1,5 +1,6 @@
 data
-models
+learned_models
+output
 
 .idea/
 __pycache__/

@@ -16,7 +16,7 @@ def main():
     input_graph = os.path.join(os.getcwd(), model_name, 'tensorflow_logs', 'graph', 'graph.pb')
 
     # define the path in which to save the frozen graph
-    output_graph = os.path.join(os.getcwd(), model_name, 'graph.pb')
+    output_graph = os.path.join(os.getcwd(), model_name, 'frozen_graph.pb')
 
     # the frozen_graph directory must exist in order to freeze the model
     directory = os.path.join(os.getcwd(), model_name)

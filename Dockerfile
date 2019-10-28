@@ -9,7 +9,7 @@ WORKDIR /workspace
 # if you have more file use the COPY command to move them to the workspace
 # IMPORTANT: This should fail if "frozen_graph.pb" does not exist.
 # This file will contain a learned model which the agent should execute.
-COPY models/graph.pb .
+COPY learned_models/frozen_graph.pb .
 COPY requirements.txt .
 COPY src/ src/
 
