@@ -2,13 +2,23 @@
 
 import time
 import os
+import argparse
 from src.learning.cnn_training_functions import load_data, CNNTraining
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
-def main():
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('model_name', type=str, help='The name of the trained model')
+    args = parser.parse_args()
+    return args
+
+
+def main() -> None:
+    args = parse_args()
+
     # define path for training dataset
     file_data_path = os.path.join(os.getcwd(), 'data', 'LF_dataset.h5')
 
@@ -33,9 +43,9 @@ def main():
     print('Reading test dataset')
     test_velocities, test_images = load_data(file_data_path, "testing")
 
-    # construct model name based on the hyper parameters
-    # model_name = form_model_name(batch_size, learning_rate, optimizer, epochs)
-    model_name = 'learned_models'
+    # construct the model name
+    model_dir = 'learned_models'
+    model_name = args.model_name
 
     print('Starting training for {} model.'.format(model_name))
 
@@ -44,7 +54,7 @@ def main():
 
     # train model
     cnn_train = CNNTraining(batch_size, epochs, learning_rate, optimizer)
-    cnn_train.training(model_name, train_velocities, train_images, test_velocities, test_images)
+    cnn_train.training(model_dir, model_name, train_velocities, train_images, test_velocities, test_images)
 
     # calculate total training time in minutes
     training_time = (time.time() - start_time) / 60

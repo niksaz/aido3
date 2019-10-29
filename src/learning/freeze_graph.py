@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import argparse
 from tensorflow.python.tools import freeze_graph
 import tensorflow as tf
 
@@ -8,15 +9,25 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
-def main():
-    # Define the name of your model
-    model_name = 'learned_models'
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('model_name', type=str, help='The name of the model to freeze')
+    args = parser.parse_args()
+    return args
+
+
+def main() -> None:
+    args = parse_args()
+
+    # construct the model name
+    model_dir = 'learned_models'
+    model_name = args.model_name
 
     # define the path to the graph from training
-    input_graph = os.path.join(os.getcwd(), model_name, 'tensorflow_logs', 'graph', 'graph.pb')
+    input_graph = os.path.join(os.getcwd(), model_dir, model_name, 'graph', 'graph.pb')
 
     # define the path in which to save the frozen graph
-    output_graph = os.path.join(os.getcwd(), model_name, 'frozen_graph.pb')
+    output_graph = os.path.join(os.getcwd(), model_dir, 'frozen_graph.pb')
 
     # the frozen_graph directory must exist in order to freeze the model
     directory = os.path.join(os.getcwd(), model_name)
@@ -24,7 +35,7 @@ def main():
         os.makedirs(directory)
 
     # define the checkpoint/weights you want to freeze inside the graph
-    input_checkpoint = tf.train.latest_checkpoint('{}/tensorflow_logs'.format(model_name))
+    input_checkpoint = tf.train.latest_checkpoint(os.path.join(model_dir, model_name))
 
     # define the name of the prediction output node
     # This name can be easily extracted using Tensorboard. In GRAPHS tab of Tensorboard, check the inputs of Loss scope.
