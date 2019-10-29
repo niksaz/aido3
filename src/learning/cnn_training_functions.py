@@ -45,25 +45,21 @@ def form_model_name(batch_size, lr, optimizer, epochs):
 
 
 class CNNTraining:
-    def __init__(self, batch, epochs, learning_rate, optimizer):
-
+    def __init__(self, batch, epochs, learning_rate):
         self.batch_size = batch
         self.epochs = epochs
         self.learning_rate = learning_rate
-        self.optimizer = optimizer
 
     def backpropagation(self):
-        '''
-        Executes backpropagation during training based on the defined optimizer,learning rate and loss function
-
-        '''
-
-        # define the optimizer
+        """
+        Compiles a backpropagation operation for the TF graphs
+        """
         with tf.name_scope("Optimizer"):
-            if self.optimizer == "Adam":
-                return tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
-            elif self.optimizer == "GDS":
-                return tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
+            optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate, epsilon=1e-4)
+            gradients, variables = zip(*optimizer.compute_gradients(self.loss))
+            gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
+            back_op = optimizer.apply_gradients(zip(gradients, variables))
+            return back_op
 
     def loss_function(self):
         '''
@@ -107,7 +103,7 @@ class CNNTraining:
             hl_fc_1 = tf.layers.dense(inputs=conv_flat, units=64, activation=tf.nn.relu, name="fc_layer_1")
 
             # add 2nd fully connected layers to predict the driving commands
-            hl_fc_2 = tf.layers.dense(inputs=hl_fc_1, units=2, name="fc_layer_2")
+            hl_fc_2 = tf.layers.dense(inputs=hl_fc_1, units=2, activation=tf.nn.tanh, name="fc_layer_2")
 
             return hl_fc_2
 
@@ -122,7 +118,7 @@ class CNNTraining:
         :return: sum of loss at each epoch
         '''
 
-        pred_loss = 0
+        total_loss = 0
         i = 0
         while i <= data_size - 1:
 
@@ -142,10 +138,11 @@ class CNNTraining:
                 # train using the batch and calculate the loss
                 c = self.sess.run(self.loss, feed_dict={self.x: train_x, self.vel_true: train_y})
 
-            pred_loss += c
+            total_loss += c * len(train_x)
             i += self.batch_size
 
-        return pred_loss
+        mean_loss = total_loss / data_size
+        return mean_loss
 
     def training(self, model_dir, model_name, train_velocities, train_images, test_velocities, test_images):
 
@@ -215,8 +212,9 @@ class CNNTraining:
 
                 # print train and test loss to monitor progress during training every 50 epochs
                 if (epoch + 1) % 50 == 0:
-                    print("Epoch: {:04d} , train_loss = {:.6f} , test_loss = {:.6f}".format(epoch + 1, avg_train_loss,
-                                                                                            avg_test_loss))
+                    print("Epoch: {:04d}, mean_train_loss = {:.9f}, mean_test_loss = {:.9f}".format(epoch + 1,
+                                                                                                    avg_train_loss,
+                                                                                                    avg_test_loss))
 
                 # save weights every 100 epochs
                 if (epoch + 1) % 100 == 0:

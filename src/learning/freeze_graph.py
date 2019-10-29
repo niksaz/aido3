@@ -30,7 +30,7 @@ def main() -> None:
     output_graph = os.path.join(os.getcwd(), model_dir, 'frozen_graph.pb')
 
     # the frozen_graph directory must exist in order to freeze the model
-    directory = os.path.join(os.getcwd(), model_name)
+    directory = os.path.join(os.getcwd(), model_dir, model_name)
     if not os.path.exists(directory):
         os.makedirs(directory)
 

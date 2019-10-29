@@ -25,12 +25,7 @@ def main() -> None:
     # define batch_size (e.g 50, 100)
     batch_size = 64
 
-    # define which optimizer you want to use (e.g "Adam", "GDS"). For "Adam" and "GDS" this script will take care the rest.
-    # ATTENTION !! If you want to choose a different optimizer from these two, you will have to add it in the training functions.
-    optimizer = "GDS"
-
-    # define learning rate (e.g 1E-3, 1E-4, 1E-5):
-    learning_rate = 1E-4
+    learning_rate = 1e-4
 
     # define total epochs (e.g 1000, 5000, 10000)
     epochs = 1000
@@ -53,7 +48,7 @@ def main() -> None:
     start_time = time.time()
 
     # train model
-    cnn_train = CNNTraining(batch_size, epochs, learning_rate, optimizer)
+    cnn_train = CNNTraining(batch_size, epochs, learning_rate)
     cnn_train.training(model_dir, model_name, train_velocities, train_images, test_velocities, test_images)
 
     # calculate total training time in minutes
