@@ -9,7 +9,6 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
-
     # define path for training dataset
     file_data_path = os.path.join(os.getcwd(), 'data', 'LF_dataset.h5')
 

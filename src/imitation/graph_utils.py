@@ -1,5 +1,6 @@
 import tensorflow as tf
 
+
 def load_graph(frozen_graph_filename):
     # We load the protobuf file from the disk and parse it to retrieve the
     # unserialized graph_def

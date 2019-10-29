@@ -13,8 +13,8 @@ from extract_data_functions import image_preprocessing, synchronize_data
 # A collection of ros messages coming from a single topic.
 MessageCollection = collections.namedtuple("MessageCollection", ["topic", "type", "messages"])
 
-def extract_messages(path, requested_topics):
 
+def extract_messages(path, requested_topics):
     # check if path is string and requested_topics a list
     assert isinstance(path, str)
     assert isinstance(requested_topics, list)
@@ -39,16 +39,16 @@ def extract_messages(path, requested_topics):
 
     return extracted_messages
 
-def main():
 
+def main():
     # define the list of topics that you want to extract
     ros_topics = [
-                # the duckiebot name can change from one bag file to the other, so define
-                # the topics WITHOUT the duckiebot name in the beginning
-                "/camera_node/image/compressed",
-                # "/lane_controller_node/car_cmd"
-                "/wheels_driver_node/wheels_cmd"
-                ]
+        # the duckiebot name can change from one bag file to the other, so define
+        # the topics WITHOUT the duckiebot name in the beginning
+        "/camera_node/image/compressed",
+        # "/lane_controller_node/car_cmd"
+        "/wheels_driver_node/wheels_cmd"
+    ]
 
     # define the bags_directory in order to extract the data
     bags_directory = os.path.join(os.getcwd(), "data", "bag_files")
@@ -91,7 +91,7 @@ def main():
             print("Failed to open {}".format(abs_path))
             continue
 
-                         ######## This following part is implementation specific ########
+            ######## This following part is implementation specific ########
 
         # The composition of the ros messages is different (e.g. different names in the messages) and also different
         # tools are used to handle the different extracted data (e.g. cvbridge for images). As a result, the following
@@ -117,7 +117,7 @@ def main():
 
             # hack to get the timestamp of each image in <float 'secs.nsecs'> format instead of <int 'rospy.rostime.Time'>
             temp_timestamp = ext_images[num].timestamp
-            img_timestamp = temp_timestamp.secs + temp_timestamp.nsecs *10 ** -len(str(temp_timestamp.nsecs))
+            img_timestamp = temp_timestamp.secs + temp_timestamp.nsecs * 10 ** -len(str(temp_timestamp.nsecs))
 
             temp_df = pd.DataFrame({
                 'img': [img],
@@ -131,7 +131,6 @@ def main():
 
         # create dataframe with the car_cmds and the car_cmds' timestamps
         for num, cmd in enumerate(ext_car_cmds):
-
             # read wheel commands messages
             cmd_msg = cmd.message
 
@@ -212,7 +211,7 @@ def main():
     Variants
     ========
     split: Split into 'training', 'test' datasets. There are {} training points and {} test points.
-    """.format(train_size, synch_data.shape[0]-train_size)
+    """.format(train_size, synch_data.shape[0] - train_size)
 
     variant = f.create_group('split')
     # Training dataset
@@ -236,7 +235,7 @@ def main():
     group.create_dataset(name='images', data=synch_imgs[train_size:], compression='gzip')
 
     print("\nThe total {} data were split into {} training and {} test dataset points and saved in {} "
-          "directory.".format(synch_data.shape[0], train_size, synch_data.shape[0]-train_size, data_directory))
+          "directory.".format(synch_data.shape[0], train_size, synch_data.shape[0] - train_size, data_directory))
 
 
 if __name__ == "__main__":

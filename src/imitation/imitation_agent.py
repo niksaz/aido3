@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
+
 from dataclasses import dataclass
-from typing import Tuple
 
 import tensorflow as tf
 import numpy as np
@@ -10,6 +10,7 @@ from aido_schemas import EpisodeStart, protocol_agent_duckiebot1, PWMCommands, D
 
 from graph_utils import load_graph
 from cnn_predictions import fun_img_preprocessing
+
 
 @dataclass
 class ImitationAgentConfig:
@@ -91,6 +92,7 @@ def jpg2rgb(image_data: bytes) -> np.ndarray:
     assert data.dtype == np.uint8
     return data
 
+
 def simulation_scaling(action):
     """
     Remark: Use this if not mapping to PWM directly
@@ -107,7 +109,7 @@ def simulation_scaling(action):
     trim = 0.0
     radius = 0.0318
 
-    original_v = (action[0] + action[1])/2.0
+    original_v = (action[0] + action[1]) / 2.0
     original_omega = (action[1] - action[0]) * radius / baseline / 2.0
     vel = 0.25
     omega = original_omega * vel / original_v

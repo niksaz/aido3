@@ -45,7 +45,6 @@ def form_model_name(batch_size, lr, optimizer, epochs):
 
 
 class CNN_training:
-
     def __init__(self, batch, epochs, learning_rate, optimizer):
 
         self.batch_size = batch
@@ -85,7 +84,6 @@ class CNN_training:
         '''
 
         with tf.variable_scope('ConvNet', reuse=tf.AUTO_REUSE):
-
             # define the 4-d tensor expected by TensorFlow
             # [-1: arbitrary num of images, img_height, img_width, num_channels]
             x_img = tf.reshape(x, [-1, 48, 96, 1])
@@ -185,23 +183,24 @@ class CNN_training:
 
             # operation to write logs for Tensorboard
             tf_graph = self.sess.graph
-            test_writer = tf.summary.FileWriter(logs_test_path, graph=tf.get_default_graph() )
+            test_writer = tf.summary.FileWriter(logs_test_path, graph=tf.get_default_graph())
             test_writer.add_graph(tf_graph)
 
-            train_writer = tf.summary.FileWriter(logs_train_path, graph=tf.get_default_graph() )
+            train_writer = tf.summary.FileWriter(logs_train_path, graph=tf.get_default_graph())
             train_writer.add_graph(tf_graph)
 
             # IMPORTANT: this is a crucial part for compiling TensorFlow graph to a Movidius one later in the pipeline.
             # The important file to create is the 'graph.pb' which will be used to freeze the TensorFlow graph.
             # The 'graph.pbtxt' file is just the same graph in txt format in case you want to check the format of the
             # saved information.
-            tf.train.write_graph(tf_graph.as_graph_def(), graph_path, 'graph.pbtxt', as_text= True)
-            tf.train.write_graph(tf_graph.as_graph_def(), graph_path, 'graph.pb', as_text= False)
+            tf.train.write_graph(tf_graph.as_graph_def(), graph_path, 'graph.pbtxt', as_text=True)
+            tf.train.write_graph(tf_graph.as_graph_def(), graph_path, 'graph.pb', as_text=False)
 
             for epoch in range(self.epochs):
 
                 # run train cycle
-                avg_train_loss = self.epoch_iteration(train_velocities.shape[0], train_images, train_velocities, 'train')
+                avg_train_loss = self.epoch_iteration(train_velocities.shape[0], train_images, train_velocities,
+                                                      'train')
 
                 # save the training loss using the manual summaries
                 man_loss_summary.value[0].simple_value = avg_train_loss
@@ -216,7 +215,8 @@ class CNN_training:
 
                 # print train and test loss to monitor progress during training every 50 epochs
                 if epoch % 50 == 0:
-                    print("Epoch: {:04d} , train_loss = {:.6f} , test_loss = {:.6f}".format(epoch+1, avg_train_loss, avg_test_loss))
+                    print("Epoch: {:04d} , train_loss = {:.6f} , test_loss = {:.6f}".format(epoch + 1, avg_train_loss,
+                                                                                            avg_test_loss))
 
                 # save weights every 100 epochs
                 if epoch % 100 == 0:
