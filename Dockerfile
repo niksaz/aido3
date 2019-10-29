@@ -22,4 +22,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN apt update && apt install -y libsm6 libxext6
 
 # CMD python solution.py
-ENTRYPOINT ["python", "src/imitation/imitation_agent.py"]
+ENTRYPOINT ["python", "-m", "src.imitation.imitation_agent"]

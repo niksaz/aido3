@@ -38,10 +38,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN mkdir /workspace/data
 
 # Download logs
-RUN python src/extraction/download_logs.py
+RUN python -m src.extraction.download_logs
 
 # Extract data into useable format
-RUN python src/extraction/extract_data.py
+RUN python -m src.extraction.extract_data
 
 # Remove bagfiles after extracting training data - ! Please adapt if data is still required
 RUN rm -rf data/bag_files
