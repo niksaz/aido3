@@ -1,9 +1,3 @@
-# challenge name(s); defaults to all compatible challenges
-# challenge: [c1,c2]
-
-# conventions + format
 protocol: aido2_db18_agent-z2
-user-label: "Baseline-IL-logs-tensorflow"
+user-label: "beta"
 user-payload: {}
-description: |
-    This is a simple baseline solution for an agent learns to imitate behavior from logs.
