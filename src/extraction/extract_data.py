@@ -8,7 +8,7 @@ import collections
 import rosbag
 import cv_bridge
 from copy import copy
-from extract_data_functions import image_preprocessing, synchronize_data
+from src.extraction.extract_data_functions import image_preprocessing, synchronize_data
 
 # A collection of ros messages coming from a single topic.
 MessageCollection = collections.namedtuple("MessageCollection", ["topic", "type", "messages"])

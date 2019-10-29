@@ -2,7 +2,7 @@
 
 import time
 import os
-from cnn_training_functions import *
+from src.learning.cnn_training_functions import load_data, CNNTraining
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -43,7 +43,7 @@ def main():
     start_time = time.time()
 
     # train model
-    cnn_train = CNN_training(batch_size, epochs, learning_rate, optimizer)
+    cnn_train = CNNTraining(batch_size, epochs, learning_rate, optimizer)
     cnn_train.training(model_name, train_velocities, train_images, test_velocities, test_images)
 
     # calculate total training time in minutes

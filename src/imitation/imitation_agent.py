@@ -8,8 +8,8 @@ import numpy as np
 from aido_schemas import EpisodeStart, protocol_agent_duckiebot1, PWMCommands, Duckiebot1Commands, LEDSCommands, RGB, \
     wrap_direct, Context, Duckiebot1Observations, JPGImage
 
-from graph_utils import load_graph
-from cnn_predictions import fun_img_preprocessing
+from src.imitation.graph_utils import load_graph
+from src.imitation.cnn_predictions import fun_img_preprocessing
 
 
 @dataclass

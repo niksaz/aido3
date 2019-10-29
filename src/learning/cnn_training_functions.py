@@ -44,7 +44,7 @@ def form_model_name(batch_size, lr, optimizer, epochs):
     return "batch={},lr={},optimizer={},epochs={}".format(batch_size, lr, optimizer, epochs)
 
 
-class CNN_training:
+class CNNTraining:
     def __init__(self, batch, epochs, learning_rate, optimizer):
 
         self.batch_size = batch
