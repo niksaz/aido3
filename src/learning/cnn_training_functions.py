@@ -49,6 +49,7 @@ class CNNTraining:
         self.batch_size = batch
         self.epochs = epochs
         self.learning_rate = learning_rate
+        self.reg_coef = 1e-2
 
     def backpropagation(self):
         """
@@ -69,7 +70,10 @@ class CNNTraining:
 
         # define loss function and encapsulate its scope
         with tf.name_scope("Loss"):
-            return tf.reduce_mean(tf.square(self.vel_pred - self.vel_true))
+            task_loss = tf.reduce_mean(tf.square(self.vel_pred - self.vel_true))
+            reg_loss = tf.reduce_sum(tf.losses.get_regularization_losses())
+            loss = task_loss + reg_loss
+            return loss
 
     def model(self, x):
         '''
@@ -78,7 +82,6 @@ class CNNTraining:
 
         :return: output layer
         '''
-
         with tf.variable_scope('ConvNet', reuse=tf.AUTO_REUSE):
             # define the 4-d tensor expected by TensorFlow
             # [-1: arbitrary num of images, img_height, img_width, num_channels]
@@ -86,13 +89,19 @@ class CNNTraining:
 
             # define 1st convolutional layer
             hl_conv_1 = tf.layers.conv2d(x_img, kernel_size=5, filters=2, padding="valid",
-                                         activation=tf.nn.relu, name="conv_layer_1")
+                                         kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_coef),
+                                         name="conv_layer_1")
+            hl_conv_1 = tf.layers.batch_normalization(hl_conv_1, training=self.is_train)
+            hl_conv_1 = tf.nn.relu(hl_conv_1)
 
             max_pool_1 = tf.layers.max_pooling2d(hl_conv_1, pool_size=2, strides=2)
 
             # define 2nd convolutional layer
             hl_conv_2 = tf.layers.conv2d(max_pool_1, kernel_size=5, filters=8, padding="valid",
-                                         activation=tf.nn.relu, name="conv_layer_2")
+                                         kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_coef),
+                                         name="conv_layer_2")
+            hl_conv_2 = tf.layers.batch_normalization(hl_conv_2, training=self.is_train)
+            hl_conv_2 = tf.nn.relu(hl_conv_2)
 
             max_pool_2 = tf.layers.max_pooling2d(hl_conv_2, pool_size=2, strides=2)
 
@@ -100,10 +109,16 @@ class CNNTraining:
             conv_flat = tf.layers.flatten(max_pool_2)
 
             # add 1st fully connected layers to the neural network
-            hl_fc_1 = tf.layers.dense(inputs=conv_flat, units=64, activation=tf.nn.relu, name="fc_layer_1")
+            hl_fc_1 = tf.layers.dense(inputs=conv_flat, units=64, name="fc_layer_1",
+                                      kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_coef))
+            hl_fc_1 = tf.layers.batch_normalization(hl_fc_1, training=self.is_train)
+            hl_fc_1 = tf.nn.relu(hl_fc_1)
 
             # add 2nd fully connected layers to predict the driving commands
-            hl_fc_2 = tf.layers.dense(inputs=hl_fc_1, units=2, activation=tf.nn.tanh, name="fc_layer_2")
+            hl_fc_2 = tf.layers.dense(inputs=hl_fc_1, units=2, name="fc_layer_2",
+                                      kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_coef))
+            # no batch norm for the final layer
+            hl_fc_2 = tf.nn.tanh(hl_fc_2)
 
             return hl_fc_2
 
@@ -118,7 +133,7 @@ class CNNTraining:
         :return: sum of loss at each epoch
         '''
 
-        total_loss = 0
+        batch_losses = []
         i = 0
         while i <= data_size - 1:
 
@@ -132,17 +147,21 @@ class CNNTraining:
 
             if mode == 'train':
                 # train using the batch and calculate the loss
-                _, c = self.sess.run([self.opt, self.loss], feed_dict={self.x: train_x, self.vel_true: train_y})
+                _, c = self.sess.run([self.opt, self.loss],
+                                     feed_dict={self.x: train_x, self.vel_true: train_y, self.is_train: True})
 
             elif mode == 'test':
                 # train using the batch and calculate the loss
-                c = self.sess.run(self.loss, feed_dict={self.x: train_x, self.vel_true: train_y})
+                c = self.sess.run(self.loss,
+                                  feed_dict={self.x: train_x, self.vel_true: train_y, self.is_train: False})
 
-            total_loss += c * len(train_x)
+            else:
+                raise NotImplementedError('Unknown mode: {}'.format(mode))
+
+            batch_losses.append(c)
             i += self.batch_size
 
-        mean_loss = total_loss / data_size
-        return mean_loss
+        return np.mean(batch_losses)
 
     def training(self, model_dir, model_name, train_velocities, train_images, test_velocities, test_images):
 
@@ -157,11 +176,12 @@ class CNNTraining:
         man_loss_summary.value.add(tag='Loss', simple_value=None)
 
         # define placeholder variable for input images (each images is a row vector [1, 4608 = 48x96x1])
-        self.x = tf.placeholder(tf.float16, shape=[None, 48 * 96], name='x')
+        self.x = tf.placeholder(tf.float32, shape=[None, 48 * 96], name='x')
+        self.is_train = tf.placeholder(tf.bool, name="is_train")
 
         # define placeholder for the true omega velocities
         # [None: tensor may hold arbitrary num of velocities, number of omega predictions for each image]
-        self.vel_true = tf.placeholder(tf.float16, shape=[None, 2], name="vel_true")
+        self.vel_true = tf.placeholder(tf.float32, shape=[None, 2], name="vel_true")
         self.vel_pred = self.model(self.x)
 
         self.loss = self.loss_function()
