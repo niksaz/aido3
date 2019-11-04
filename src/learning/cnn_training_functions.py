@@ -30,7 +30,7 @@ def load_data(file_path, train_or_test="training"):
 
 
 def form_model_name(batch_size, lr, optimizer, epochs):
-    '''
+    """
     Creates name of model as a string, based on the defined hyperparameters used in training
 
     :param batch_size: batch size
@@ -38,8 +38,7 @@ def form_model_name(batch_size, lr, optimizer, epochs):
     :param optimizer: optimizer (e.g. GDS, Adam )
     :param epochs: number of epochs
     :return: name of model as a string
-    '''
-
+    """
     # return "batch={},lr={},optimizer={},epochs={}_grayscale".format(batch_size, lr, optimizer, epochs)
     return "batch={},lr={},optimizer={},epochs={}".format(batch_size, lr, optimizer, epochs)
 
@@ -61,7 +60,6 @@ class Trainer:
         :param mode: 'train' or 'test' in order to define if backpropagation is executed as well or not
         :return: mean of losses for the epoch
         """
-
         batch_losses = []
         i = 0
         while i <= data_size - 1:
@@ -92,25 +90,22 @@ class Trainer:
         return np.mean(batch_losses)
 
     def train(self, model, model_dir, model_name, train_velocities, train_images, test_velocities, test_images):
-        # define paths to save the TensorFlow logs
+        seed = 76
+        tf.random.set_random_seed(seed)
+        np.random.seed(seed)
+
         model_path = os.path.join(os.getcwd(), model_dir, model_name)
         logs_train_path = os.path.join(model_path, 'train')
         logs_test_path = os.path.join(model_path, 'test')
         graph_path = os.path.join(model_path, 'graph')
 
-        # manual scalar summaries for loss tracking
         man_loss_summary = tf.Summary()
         man_loss_summary.value.add(tag='Loss', simple_value=None)
-
-        # Add the training operation
-        model.add_train_op(self.learning_rate)
-
-        # initialize variables
-        init = tf.global_variables_initializer()
-
-        # Operation to save and restore all variables
         saver = tf.train.Saver()
 
+        model.add_train_op(self.learning_rate)
+
+        init = tf.global_variables_initializer()
         with tf.Session() as self.sess:
             # run initializer
             self.sess.run(init)
@@ -131,6 +126,10 @@ class Trainer:
             tf.train.write_graph(tf_graph.as_graph_def(), graph_path, 'graph.pb', as_text=False)
 
             for epoch in range(self.epochs):
+                p = np.random.permutation(len(train_images))
+                train_images = train_images[p]
+                train_velocities = train_velocities[p]
+
                 # run train cycle
                 avg_train_loss = self.__run_epoch_for(model, train_velocities.shape[0], train_images, train_velocities,
                                                       'train')
@@ -148,7 +147,7 @@ class Trainer:
                 test_writer.add_summary(man_loss_summary, epoch)
 
                 # print train and test loss to monitor progress during training every 50 epochs
-                if (epoch + 1) % (self.epochs // 50) == 0:
+                if (epoch + 1) % (self.epochs // 100) == 0:
                     print("Epoch: {:04d}, mean_train_loss = {:.9f}, mean_test_loss = {:.9f}".format(epoch + 1,
                                                                                                     avg_train_loss,
                                                                                                     avg_test_loss))
