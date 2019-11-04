@@ -27,7 +27,7 @@ def main() -> None:
     input_graph = os.path.join(os.getcwd(), model_dir, model_name, 'graph', 'graph.pb')
 
     # define the path in which to save the frozen graph
-    output_graph = os.path.join(os.getcwd(), model_dir, 'frozen_graph.pb')
+    output_graph = os.path.join(os.getcwd(), model_dir, f'{model_name}.pb')
 
     # the frozen_graph directory must exist in order to freeze the model
     directory = os.path.join(os.getcwd(), model_dir, model_name)

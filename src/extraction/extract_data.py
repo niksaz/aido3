@@ -8,7 +8,8 @@ import collections
 import rosbag
 import cv_bridge
 from copy import copy
-from src.extraction.extract_data_functions import image_preprocessing, synchronize_data
+from src.extraction.extract_data_functions import synchronize_data
+from src.utils.preprocessing import preprocess_image
 
 # A collection of ros messages coming from a single topic.
 MessageCollection = collections.namedtuple("MessageCollection", ["topic", "type", "messages"])
@@ -113,7 +114,7 @@ def main():
             # img = cv2.imdecode(np_arr, cv2.CV_LOAD_IMAGE_COLOR)
             # print("img", img, img.shape)
             img = cvbridge_object.compressed_imgmsg_to_cv2(img.message)
-            img = image_preprocessing(img)  # -> each image is of dimensions (1, 48x96=4608)
+            img = preprocess_image(img)
 
             # hack to get the timestamp of each image in <float 'secs.nsecs'> format instead of <int 'rospy.rostime.Time'>
             temp_timestamp = ext_images[num].timestamp

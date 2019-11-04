@@ -44,100 +44,28 @@ def form_model_name(batch_size, lr, optimizer, epochs):
     return "batch={},lr={},optimizer={},epochs={}".format(batch_size, lr, optimizer, epochs)
 
 
-class CNNTraining:
+class Trainer:
     def __init__(self, batch, epochs, learning_rate):
         self.batch_size = batch
         self.epochs = epochs
         self.learning_rate = learning_rate
-        self.reg_coef = 1e-2
+        self.sess = None
 
-    def backpropagation(self):
+    def __run_epoch_for(self, model, data_size, x_data, y_data, mode):
         """
-        Compiles a backpropagation operation for the TF graphs
-        """
-        with tf.name_scope("Optimizer"):
-            optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate, epsilon=1e-4)
-            gradients, variables = zip(*optimizer.compute_gradients(self.loss))
-            gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
-            back_op = optimizer.apply_gradients(zip(gradients, variables))
-            return back_op
-
-    def loss_function(self):
-        '''
-        Calculates the loss during training using the predicted and true values(in this case velocities)
-
-        '''
-
-        # define loss function and encapsulate its scope
-        with tf.name_scope("Loss"):
-            task_loss = tf.reduce_mean(tf.square(self.vel_pred - self.vel_true))
-            reg_loss = tf.reduce_sum(tf.losses.get_regularization_losses())
-            loss = task_loss + reg_loss
-            return loss
-
-    def model(self, x):
-        '''
-        Define model of CNN under the TensorFlow scope "ConvNet".
-        The scope is used for better organization and visualization in TensorBoard
-
-        :return: output layer
-        '''
-        with tf.variable_scope('ConvNet', reuse=tf.AUTO_REUSE):
-            # define the 4-d tensor expected by TensorFlow
-            # [-1: arbitrary num of images, img_height, img_width, num_channels]
-            x_img = tf.reshape(x, [-1, 48, 96, 1])
-
-            # define 1st convolutional layer
-            hl_conv_1 = tf.layers.conv2d(x_img, kernel_size=5, filters=2, padding="valid",
-                                         kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_coef),
-                                         name="conv_layer_1")
-            hl_conv_1 = tf.layers.batch_normalization(hl_conv_1, training=self.is_train)
-            hl_conv_1 = tf.nn.relu(hl_conv_1)
-
-            max_pool_1 = tf.layers.max_pooling2d(hl_conv_1, pool_size=2, strides=2)
-
-            # define 2nd convolutional layer
-            hl_conv_2 = tf.layers.conv2d(max_pool_1, kernel_size=5, filters=8, padding="valid",
-                                         kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_coef),
-                                         name="conv_layer_2")
-            hl_conv_2 = tf.layers.batch_normalization(hl_conv_2, training=self.is_train)
-            hl_conv_2 = tf.nn.relu(hl_conv_2)
-
-            max_pool_2 = tf.layers.max_pooling2d(hl_conv_2, pool_size=2, strides=2)
-
-            # flatten tensor to connect it with the fully connected layers
-            conv_flat = tf.layers.flatten(max_pool_2)
-
-            # add 1st fully connected layers to the neural network
-            hl_fc_1 = tf.layers.dense(inputs=conv_flat, units=64, name="fc_layer_1",
-                                      kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_coef))
-            hl_fc_1 = tf.layers.batch_normalization(hl_fc_1, training=self.is_train)
-            hl_fc_1 = tf.nn.relu(hl_fc_1)
-
-            # add 2nd fully connected layers to predict the driving commands
-            hl_fc_2 = tf.layers.dense(inputs=hl_fc_1, units=2, name="fc_layer_2",
-                                      kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_coef))
-            # no batch norm for the final layer
-            hl_fc_2 = tf.nn.tanh(hl_fc_2)
-
-            return hl_fc_2
-
-    def epoch_iteration(self, data_size, x_data, y_data, mode):
-        '''
         For each epoch extract batches and execute train or test step depending on the inserted mode
 
         :param data_size: number of velocities and images
         :param x_data: images
         :param y_data: velocities
         :param mode: 'train' or 'test' in order to define if backpropagation is executed as well or not
-        :return: sum of loss at each epoch
-        '''
+        :return: mean of losses for the epoch
+        """
 
         batch_losses = []
         i = 0
         while i <= data_size - 1:
-
-            # extract batch
+            # prepare batch
             if i + self.batch_size <= data_size - 1:
                 train_x = x_data[i: i + self.batch_size]
                 train_y = y_data[i: i + self.batch_size]
@@ -147,13 +75,13 @@ class CNNTraining:
 
             if mode == 'train':
                 # train using the batch and calculate the loss
-                _, c = self.sess.run([self.opt, self.loss],
-                                     feed_dict={self.x: train_x, self.vel_true: train_y, self.is_train: True})
+                _, c = self.sess.run([model.train_op, model.loss],
+                                     feed_dict={model.x: train_x, model.true_output: train_y, model.is_train: True})
 
             elif mode == 'test':
                 # train using the batch and calculate the loss
-                c = self.sess.run(self.loss,
-                                  feed_dict={self.x: train_x, self.vel_true: train_y, self.is_train: False})
+                c = self.sess.run(model.loss,
+                                  feed_dict={model.x: train_x, model.true_output: train_y, model.is_train: False})
 
             else:
                 raise NotImplementedError('Unknown mode: {}'.format(mode))
@@ -163,8 +91,7 @@ class CNNTraining:
 
         return np.mean(batch_losses)
 
-    def training(self, model_dir, model_name, train_velocities, train_images, test_velocities, test_images):
-
+    def train(self, model, model_dir, model_name, train_velocities, train_images, test_velocities, test_images):
         # define paths to save the TensorFlow logs
         model_path = os.path.join(os.getcwd(), model_dir, model_name)
         logs_train_path = os.path.join(model_path, 'train')
@@ -175,17 +102,8 @@ class CNNTraining:
         man_loss_summary = tf.Summary()
         man_loss_summary.value.add(tag='Loss', simple_value=None)
 
-        # define placeholder variable for input images (each images is a row vector [1, 4608 = 48x96x1])
-        self.x = tf.placeholder(tf.float32, shape=[None, 48 * 96], name='x')
-        self.is_train = tf.placeholder(tf.bool, name="is_train")
-
-        # define placeholder for the true omega velocities
-        # [None: tensor may hold arbitrary num of velocities, number of omega predictions for each image]
-        self.vel_true = tf.placeholder(tf.float32, shape=[None, 2], name="vel_true")
-        self.vel_pred = self.model(self.x)
-
-        self.loss = self.loss_function()
-        self.opt = self.backpropagation()
+        # Add the training operation
+        model.add_train_op(self.learning_rate)
 
         # initialize variables
         init = tf.global_variables_initializer()
@@ -194,7 +112,6 @@ class CNNTraining:
         saver = tf.train.Saver()
 
         with tf.Session() as self.sess:
-
             # run initializer
             self.sess.run(init)
 
@@ -214,9 +131,8 @@ class CNNTraining:
             tf.train.write_graph(tf_graph.as_graph_def(), graph_path, 'graph.pb', as_text=False)
 
             for epoch in range(self.epochs):
-
                 # run train cycle
-                avg_train_loss = self.epoch_iteration(train_velocities.shape[0], train_images, train_velocities,
+                avg_train_loss = self.__run_epoch_for(model, train_velocities.shape[0], train_images, train_velocities,
                                                       'train')
 
                 # save the training loss using the manual summaries
@@ -224,7 +140,8 @@ class CNNTraining:
                 train_writer.add_summary(man_loss_summary, epoch)
 
                 # run test cycle
-                avg_test_loss = self.epoch_iteration(test_velocities.shape[0], test_images, test_velocities, 'test')
+                avg_test_loss = self.__run_epoch_for(model, test_velocities.shape[0], test_images, test_velocities,
+                                                     'test')
 
                 # save the test errors using the manual summaries
                 man_loss_summary.value[0].simple_value = avg_test_loss
@@ -240,6 +157,6 @@ class CNNTraining:
                 if (epoch + 1) % 100 == 0:
                     saver.save(self.sess, logs_train_path, epoch)
 
-        # close summary writer
-        train_writer.close()
-        test_writer.close()
+            # close summary writer
+            train_writer.close()
+            test_writer.close()

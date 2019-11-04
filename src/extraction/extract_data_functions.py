@@ -3,32 +3,6 @@
 import numpy as np
 import pandas as pd
 from copy import copy
-import cv2
-
-
-def image_preprocessing(image):
-    # define new image's height and width
-    image_final_height = 48
-    image_final_width = 96
-
-    # crop the upper third of the image -> new image will be 320x640
-    new_img = image[int(image.shape[0] / 3):, :, :]
-
-    # transform the color image to grayscale
-    new_img = cv2.cvtColor(new_img[:, :, :], cv2.COLOR_RGB2GRAY)
-
-    # resize the image from 320x640 to 48x96
-    new_img = cv2.resize(new_img, (image_final_width, image_final_height))  # this returns image 48x96 and not 96x48
-
-    # normalize images to range [0, 1] (divide each pixel by 255)
-    # first transform the array of int to array of float, else the division with 255 will return an array of 0s
-    new_img = new_img.astype(float)
-    new_img = new_img / 255
-
-    # new_part
-    new_img = np.reshape(new_img, (1, -1))
-
-    return new_img
 
 
 def synchronize_data(df_imgs, df_cmds, bag_ID):

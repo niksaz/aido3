@@ -9,7 +9,7 @@ from aido_schemas import EpisodeStart, protocol_agent_duckiebot1, PWMCommands, D
     wrap_direct, Context, Duckiebot1Observations, JPGImage
 
 from src.imitation.graph_utils import load_graph
-from src.imitation.cnn_predictions import fun_img_preprocessing
+from src.utils.preprocessing import preprocess_image
 
 
 @dataclass
@@ -54,7 +54,7 @@ class ImitationAgent:
         # We launch a Session
         with tf.Session(graph=graph) as sess:
             # Additionally img is converted to greyscale
-            observation = fun_img_preprocessing(observation, 48, 96)
+            observation = preprocess_image(observation)
             # this outputs omega, the desired angular velocity
             action = sess.run(y, feed_dict={
                 x: observation,
