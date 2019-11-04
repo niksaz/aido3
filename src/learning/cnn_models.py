@@ -39,28 +39,18 @@ class CNNNetwork:
         with tf.variable_scope('ConvNet', reuse=tf.AUTO_REUSE):
             # define the 4-d tensor expected by TensorFlow
             # [-1: arbitrary num of images, img_height, img_width, num_channels]
-            x_img = tf.reshape(self.x, [-1, CFG.image_height, CFG.image_width, 1])
+            x_shaped = tf.reshape(self.x, [-1, CFG.image_height, CFG.image_width, 1])
 
-            # define 1st convolutional layer
-            hl_conv_1 = tf.layers.conv2d(x_img, kernel_size=5, filters=2, padding="valid",
-                                         kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_coef),
-                                         name="conv_layer_1")
-            hl_conv_1 = tf.layers.batch_normalization(hl_conv_1, training=self.is_train)
-            hl_conv_1 = tf.nn.relu(hl_conv_1)
+            conv_layer_block_1 = self.__build_conv_block(x_shaped, kernel_size=3, filters=2)
 
-            max_pool_1 = tf.layers.max_pooling2d(hl_conv_1, pool_size=2, strides=2)
+            conv_layer_block_2 = self.__build_conv_block(conv_layer_block_1, kernel_size=3, filters=4)
 
-            # define 2nd convolutional layer
-            hl_conv_2 = tf.layers.conv2d(max_pool_1, kernel_size=5, filters=8, padding="valid",
-                                         kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_coef),
-                                         name="conv_layer_2")
-            hl_conv_2 = tf.layers.batch_normalization(hl_conv_2, training=self.is_train)
-            hl_conv_2 = tf.nn.relu(hl_conv_2)
+            conv_layer_block_3 = self.__build_conv_block(conv_layer_block_2, kernel_size=3, filters=8)
 
-            max_pool_2 = tf.layers.max_pooling2d(hl_conv_2, pool_size=2, strides=2)
+            conv_layer_block_4 = self.__build_conv_block(conv_layer_block_3, kernel_size=3, filters=16)
 
             # flatten tensor to connect it with the fully connected layers
-            conv_flat = tf.layers.flatten(max_pool_2)
+            conv_flat = tf.layers.flatten(conv_layer_block_4)
 
             # add 1st fully connected layers to the neural network
             hl_fc_1 = tf.layers.dense(inputs=conv_flat, units=64, name="fc_layer_1",
@@ -71,9 +61,16 @@ class CNNNetwork:
             # add 2nd fully connected layers to predict the driving commands
             hl_fc_2 = tf.layers.dense(inputs=hl_fc_1, units=2, name="fc_layer_2",
                                       kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_coef))
-            # no batch norm for the final layer
             hl_fc_2 = tf.nn.tanh(hl_fc_2)
             self.output = hl_fc_2
+
+    def __build_conv_block(self, input_layer, kernel_size, filters):
+        conv2d_layer = tf.layers.conv2d(input_layer, kernel_size=kernel_size, filters=filters, padding="valid",
+                                        kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_coef))
+        batch_norm_layer = tf.layers.batch_normalization(conv2d_layer, training=self.is_train)
+        non_linear_layer = tf.nn.relu(batch_norm_layer)
+        max_pool_layer = tf.layers.max_pooling2d(non_linear_layer, pool_size=2, strides=2)
+        return max_pool_layer
 
     def __setup_loss(self):
         with tf.name_scope("Loss"):
@@ -86,6 +83,7 @@ class CNNNetwork:
         with tf.name_scope("Optimizer"):
             optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=1e-4)
             gradients, variables = zip(*optimizer.compute_gradients(self.loss))
+            print(tf.linalg.global_norm(gradients))
             gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
             train_op = optimizer.apply_gradients(zip(gradients, variables))
             self.train_op = train_op

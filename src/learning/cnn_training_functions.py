@@ -148,13 +148,13 @@ class Trainer:
                 test_writer.add_summary(man_loss_summary, epoch)
 
                 # print train and test loss to monitor progress during training every 50 epochs
-                if (epoch + 1) % 50 == 0:
+                if (epoch + 1) % (self.epochs // 50) == 0:
                     print("Epoch: {:04d}, mean_train_loss = {:.9f}, mean_test_loss = {:.9f}".format(epoch + 1,
                                                                                                     avg_train_loss,
                                                                                                     avg_test_loss))
 
                 # save weights every 100 epochs
-                if (epoch + 1) % 100 == 0:
+                if (epoch + 1) % (self.epochs // 10) == 0:
                     saver.save(self.sess, logs_train_path, epoch)
 
             # close summary writer

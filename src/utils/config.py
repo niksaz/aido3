@@ -4,5 +4,5 @@ from easydict import EasyDict as edict
 
 CFG = edict()
 
-CFG.image_width = 96  # 160
-CFG.image_height = 48  # 80
+CFG.image_width = 160
+CFG.image_height = 80
