@@ -4,7 +4,7 @@ import time
 import os
 import argparse
 from src.learning.cnn_training_functions import load_data, Trainer
-from src.learning.cnn_models import CNNNetwork
+from src.learning.cnn_models import CNNX4Model
 from src.utils.config import CFG
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -38,17 +38,12 @@ def main() -> None:
 
     print('Starting training for {} model.'.format(model_name))
 
-    # define hyperparameters
-    batch_size = CFG.batch_size
-    epochs = CFG.epochs
-    learning_rate = CFG.lr
-
     # keep track of training time
     start_time = time.time()
 
     # create and train the model
-    model = CNNNetwork(reg_coef=1e-2)
-    trainer = Trainer(batch_size, epochs, learning_rate)
+    model = CNNX4Model(CFG.regularizer)
+    trainer = Trainer(CFG.batch_size, CFG.epochs, CFG.lr)
     trainer.train(model, model_dir, model_name, train_velocities, train_images, test_velocities, test_images)
 
     # calculate total training time in minutes
