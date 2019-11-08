@@ -7,20 +7,11 @@ from src.utils.config import CFG
 
 
 class CNNModelBase(ABC):
+
     def __init__(self, reg_coef):
         self.reg_coef = reg_coef
 
-        self.x = None
-        self.is_train = None
-        self.true_output = None
-        self.output = None
-        self.loss = None
-        self.train_op = None
-
-        self.__setup_inputs()
-        self.__setup_loss()
-
-    def __setup_inputs(self):
+    def setup_inputs(self):
         # define placeholder variable for input images
         self.x = tf.placeholder(tf.float32, shape=[None, CFG.image_height * CFG.image_width], name='x')
         self.is_train = tf.placeholder(tf.bool, name="is_train")
@@ -30,19 +21,10 @@ class CNNModelBase(ABC):
         self.true_output = tf.placeholder(tf.float32, shape=[None, 2], name="true_output")
 
     @abstractmethod
-    def __setup_output(self):
+    def setup_output(self):
         pass
 
-    def __build_conv_block(self, input_layer, kernel_size, filters, name):
-        with tf.variable_scope(name):
-            conv2d_layer = tf.layers.conv2d(input_layer, kernel_size=kernel_size, filters=filters, padding="same",
-                                            kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_coef))
-            batch_norm_layer = tf.layers.batch_normalization(conv2d_layer, training=self.is_train)
-            non_linear_layer = tf.nn.relu(batch_norm_layer)
-            max_pool_layer = tf.layers.max_pooling2d(non_linear_layer, pool_size=4, strides=4, padding="same")
-            return max_pool_layer
-
-    def __setup_loss(self):
+    def setup_loss(self):
         with tf.name_scope("Loss"):
             self.task_loss = tf.reduce_mean(tf.square(self.true_output - self.output))
             self.reg_loss = tf.reduce_sum(tf.losses.get_regularization_losses())
@@ -59,11 +41,14 @@ class CNNModelBase(ABC):
 
 
 class CNNX2Model(CNNModelBase):
+
     def __init__(self, reg_coef):
         super().__init__(reg_coef)
-        self.__setup_output()
+        self.setup_inputs()
+        self.setup_output()
+        self.setup_loss()
 
-    def __setup_output(self):
+    def setup_output(self):
         with tf.variable_scope('ConvNet', reuse=tf.AUTO_REUSE):
             x_shaped = tf.reshape(self.x, [-1, CFG.image_height, CFG.image_width, 1])
             x_normed = tf.layers.batch_normalization(x_shaped, training=self.is_train)
@@ -88,13 +73,25 @@ class CNNX2Model(CNNModelBase):
 
             self.output = hl_fc_2
 
+    def __build_conv_block(self, input_layer, kernel_size, filters, name):
+        with tf.variable_scope(name):
+            conv2d_layer = tf.layers.conv2d(input_layer, kernel_size=kernel_size, filters=filters, padding="same",
+                                            kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_coef))
+            batch_norm_layer = tf.layers.batch_normalization(conv2d_layer, training=self.is_train)
+            non_linear_layer = tf.nn.relu(batch_norm_layer)
+            max_pool_layer = tf.layers.max_pooling2d(non_linear_layer, pool_size=4, strides=4, padding="same")
+            return max_pool_layer
+
 
 class CNNX4Model(CNNModelBase):
+
     def __init__(self, reg_coef):
         super().__init__(reg_coef)
-        self.__setup_output()
+        self.setup_inputs()
+        self.setup_output()
+        self.setup_loss()
 
-    def __setup_output(self):
+    def setup_output(self):
         with tf.variable_scope('ConvNet', reuse=tf.AUTO_REUSE):
             x_shaped = tf.reshape(self.x, [-1, CFG.image_height, CFG.image_width, 1])
 
