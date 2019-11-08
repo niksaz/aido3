@@ -73,12 +73,12 @@ class Trainer:
 
             if mode == 'train':
                 # train using the batch and calculate the loss
-                _, c = self.sess.run([model.train_op, model.loss],
+                _, c = self.sess.run([model.train_op, model.task_loss],
                                      feed_dict={model.x: train_x, model.true_output: train_y, model.is_train: True})
 
             elif mode == 'test':
                 # train using the batch and calculate the loss
-                c = self.sess.run(model.loss,
+                c = self.sess.run([model.task_loss],
                                   feed_dict={model.x: train_x, model.true_output: train_y, model.is_train: False})
 
             else:
@@ -101,7 +101,7 @@ class Trainer:
 
         man_loss_summary = tf.Summary()
         man_loss_summary.value.add(tag='Loss', simple_value=None)
-        saver = tf.train.Saver()
+        saver = tf.train.Saver(max_to_keep=None)
 
         model.add_train_op(self.learning_rate)
 
@@ -125,6 +125,8 @@ class Trainer:
             tf.train.write_graph(tf_graph.as_graph_def(), graph_path, 'graph.pbtxt', as_text=True)
             tf.train.write_graph(tf_graph.as_graph_def(), graph_path, 'graph.pb', as_text=False)
 
+            best_test_mean_loss = None
+
             for epoch in range(self.epochs):
                 p = np.random.permutation(len(train_images))
                 train_images = train_images[p]
@@ -146,16 +148,19 @@ class Trainer:
                 man_loss_summary.value[0].simple_value = avg_test_loss
                 test_writer.add_summary(man_loss_summary, epoch)
 
-                # print train and test loss to monitor progress during training every 50 epochs
                 if (epoch + 1) % (self.epochs // 100) == 0:
+                     if best_test_mean_loss is None or best_test_mean_loss > avg_test_loss:
+                        best_test_mean_loss = avg_test_loss
+                        saver.save(self.sess, os.path.join(model_path, 'best_model'))
+
+                # periodically save the weights
+                if (epoch + 1) % (self.epochs // 10) == 0:
                     print("Epoch: {:04d}, mean_train_loss = {:.9f}, mean_test_loss = {:.9f}".format(epoch + 1,
                                                                                                     avg_train_loss,
                                                                                                     avg_test_loss))
+                    saver.save(self.sess,
+                               os.path.join(model_path, 'model_{:04d}_{:.9f}'.format(epoch + 1, avg_test_loss)))
 
-                # save weights every 100 epochs
-                if (epoch + 1) % (self.epochs // 10) == 0:
-                    saver.save(self.sess, logs_train_path, epoch)
-
-            # close summary writer
+                               # close summary writer
             train_writer.close()
             test_writer.close()

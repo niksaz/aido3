@@ -5,6 +5,7 @@ import os
 import argparse
 from src.learning.cnn_training_functions import load_data, Trainer
 from src.learning.cnn_models import CNNNetwork
+from src.utils.config import CFG
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -38,9 +39,9 @@ def main() -> None:
     print('Starting training for {} model.'.format(model_name))
 
     # define hyperparameters
-    batch_size = 64
-    epochs = 1000
-    learning_rate = 1e-4
+    batch_size = CFG.batch_size
+    epochs = CFG.epochs
+    learning_rate = CFG.lr
 
     # keep track of training time
     start_time = time.time()

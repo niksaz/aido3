@@ -49,7 +49,7 @@ class ImitationAgent:
 
         # We access the input and output nodes
         x = graph.get_tensor_by_name('prefix/x:0')
-        is_train = graph.get_tensor_by_name('prefix/is_train:0')
+        # is_train = graph.get_tensor_by_name('prefix/is_train:0')
         y = graph.get_tensor_by_name('prefix/ConvNet/fc_layer_2/BiasAdd:0')
         # We launch a Session
         with tf.Session(graph=graph) as sess:
@@ -58,7 +58,7 @@ class ImitationAgent:
             # this outputs omega, the desired angular velocity
             action = sess.run(y, feed_dict={
                 x: observation,
-                is_train: False,
+                # is_train: False,
             })
             action = [action[0, 1], action[0, 0]]
 
