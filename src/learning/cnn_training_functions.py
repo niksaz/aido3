@@ -148,10 +148,11 @@ class Trainer:
                 man_loss_summary.value[0].simple_value = avg_test_loss
                 test_writer.add_summary(man_loss_summary, epoch)
 
-                if (epoch + 1) % (self.epochs // 100) == 0:
-                     if best_test_mean_loss is None or best_test_mean_loss > avg_test_loss:
-                        best_test_mean_loss = avg_test_loss
-                        saver.save(self.sess, os.path.join(model_path, 'best_model'))
+                # update the best model
+                if best_test_mean_loss is None or best_test_mean_loss > avg_test_loss:
+                    best_test_mean_loss = avg_test_loss 
+                    saver.save(self.sess, os.path.join(model_path, 'best_model'))
+                    print(f'Updated the best_test_mean_loss to {best_test_mean_loss}!')
 
                 # periodically save the weights
                 if (epoch + 1) % (self.epochs // 10) == 0:

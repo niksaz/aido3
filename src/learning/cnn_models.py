@@ -51,7 +51,7 @@ class CNNX2Model(CNNModelBase):
     def setup_output(self):
         with tf.variable_scope('ConvNet', reuse=tf.AUTO_REUSE):
             x_shaped = tf.reshape(self.x, [-1, CFG.image_height, CFG.image_width, 1])
-            x_normed = tf.layers.batch_normalization(x_shaped, training=self.is_train)
+            x_normed = tf.layers.batch_normalization(x_shaped, axis=1, training=self.is_train)
 
             conv_layer_block_1 = self.__build_conv_block(x_normed, kernel_size=3, filters=4, name='conv1')
             conv_layer_block_2 = self.__build_conv_block(conv_layer_block_1, kernel_size=3, filters=4, name='conv2')
@@ -63,7 +63,7 @@ class CNNX2Model(CNNModelBase):
             # add 1st fully connected layers to the neural network
             hl_fc_1 = tf.layers.dense(inputs=conv_flat, units=64, name="fc_layer_1",
                                       kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_coef))
-            hl_fc_1 = tf.layers.batch_normalization(hl_fc_1, training=self.is_train)
+            hl_fc_1 = tf.layers.batch_normalization(hl_fc_1, axis=-1, training=self.is_train)
             hl_fc_1 = tf.nn.tanh(hl_fc_1)
 
             # add 2nd fully connected layers to predict the driving commands
@@ -77,9 +77,9 @@ class CNNX2Model(CNNModelBase):
         with tf.variable_scope(name):
             conv2d_layer = tf.layers.conv2d(input_layer, kernel_size=kernel_size, filters=filters, padding="same",
                                             kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_coef))
-            batch_norm_layer = tf.layers.batch_normalization(conv2d_layer, training=self.is_train)
+            batch_norm_layer = tf.layers.batch_normalization(conv2d_layer, axis=1, training=self.is_train)
             non_linear_layer = tf.nn.relu(batch_norm_layer)
-            max_pool_layer = tf.layers.max_pooling2d(non_linear_layer, pool_size=4, strides=4, padding="same")
+            max_pool_layer = tf.layers.max_pooling2d(non_linear_layer, pool_size=2, strides=2, padding="same")
             return max_pool_layer
 
 
