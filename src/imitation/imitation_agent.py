@@ -60,7 +60,7 @@ class ImitationAgent:
                 x: observation,
                 # is_train: False,
             })
-            action = [action[0, 1], action[0, 0]]
+            action = [action[0, 0], action[0, 1]]
 
             return action
 
@@ -93,40 +93,6 @@ def jpg2rgb(image_data: bytes) -> np.ndarray:
     assert data.ndim == 3
     assert data.dtype == np.uint8
     return data
-
-
-def simulation_scaling(action):
-    """
-    Remark: Use this if not mapping to PWM directly
-    Scales the action based on internal simulation parameters (equivalent to standard Duckiebot parameters)
-    :param action: left, right wheel commands based on imitation learning from logs
-    :return: scaled action
-    """
-    # Distance between the wheels
-    baseline = 0.102
-    # assuming same motor constants k for both motors
-    k_r = 27.0
-    k_l = 27.0
-    gain = 1.0
-    trim = 0.0
-    radius = 0.0318
-
-    original_v = (action[0] + action[1]) / 2.0
-    original_omega = (action[1] - action[0]) * radius / baseline / 2.0
-    vel = 0.25
-    omega = original_omega * vel / original_v
-
-    # adjusting k by gain and trim
-    k_r_inv = (gain + trim) / k_r
-    k_l_inv = (gain - trim) / k_l
-
-    omega_r = (vel + 0.5 * omega * baseline) / radius
-    omega_l = (vel - 0.5 * omega * baseline) / radius
-
-    # conversion from motor rotation rate to duty cycle
-    u_r = omega_r * k_r_inv
-    u_l = omega_l * k_l_inv
-    return [u_l, u_r]
 
 
 def main():
