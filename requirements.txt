@@ -1,6 +1,6 @@
 opencv-python==4.1.1.26
 numpy==1.16.2
 aido-protocols-daffy>=5.0.18
-duckietown-world-daffy>=5.0.8
-duckietown-challenges-daffy>=5.0.7
+duckietown-world-daffy>=5.0.10
+duckietown-challenges-daffy>=5.1.1
 easydict
