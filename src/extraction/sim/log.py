@@ -12,8 +12,8 @@ from src.utils.preprocessing import preprocess_image
 
 # Log configuration, you can pick your own values here
 # the more the better? or the smarter the better?
-EPISODES = 1
-STEPS = 512
+EPISODES = 10
+STEPS = 1024
 
 DEBUG = False
 

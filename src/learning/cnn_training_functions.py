@@ -166,11 +166,11 @@ class Trainer:
                 if best_test_mean_loss is None or best_test_mean_loss > avg_test_loss:
                     best_test_mean_loss = avg_test_loss 
                     saver.save(self.sess, os.path.join(model_path, 'best_model'))
-                    print(f'Updated the best_test_mean_loss to {best_test_mean_loss}!')
+                    print('best_test_mean_loss = {:.9f} on epoch {:04d}'.format(best_test_mean_loss, epoch + 1))
 
                 # periodically save the weights
                 if (epoch + 1) % (self.epochs // 10) == 0:
-                    print("Epoch: {:04d}, mean_train_loss = {:.9f}, mean_test_loss = {:.9f}".format(epoch + 1,
+                    print('Epoch: {:04d}, mean_train_loss = {:.9f}, mean_test_loss = {:.9f}'.format(epoch + 1,
                                                                                                     avg_train_loss,
                                                                                                     avg_test_loss))
                     saver.save(self.sess,
