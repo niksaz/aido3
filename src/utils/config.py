@@ -8,11 +8,8 @@ CFG.batch_size = 64
 CFG.epochs = 1000
 CFG.lr = 1e-4
 CFG.regularizer = 1e-2
+CFG.seed = 603930
 
-CFG.model = 'CNNX4Model'
+CFG.model = 'CNN96Model'
 CFG.image_width = 96
 CFG.image_height = 48
-
-# CFG.model = 'CNNX2Model'
-# CFG.image_width = 160
-# CFG.image_height = 80

@@ -6,7 +6,7 @@ import time
 
 import sklearn.model_selection
 
-from src.learning.cnn_models import CNNX2Model, CNNX4Model
+from src.learning.cnn_models import CNNResidualNetwork, CNN160Model, CNN96Model
 from src.learning.cnn_training_functions import load_sim_data, Trainer
 from src.utils.config import CFG
 
@@ -17,7 +17,6 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument('model_name', type=str, help='The name of the trained model')
-    parser.add_argument('--seed', type=int, help='Random seed to split the data with')
     args = parser.parse_args()
     return args
 
@@ -39,7 +38,7 @@ def main() -> None:
     sim_file_data_path = os.path.join(os.getcwd(), 'data', 'LF_dataset_sim.h5')
     velocities, images = load_sim_data(sim_file_data_path)
     train_velocities, test_velocities, train_images, test_images = sklearn.model_selection.train_test_split(
-        velocities, images, train_size=0.7, random_state=args.seed)
+        velocities, images, train_size=0.7, random_state=CFG.seed)
 
     # construct the model name
     model_dir = 'learned_models'
@@ -51,10 +50,12 @@ def main() -> None:
     start_time = time.time()
 
     # create and train the model
-    if CFG.model == 'CNNX2Model':
-        model = CNNX2Model(CFG.regularizer)
-    elif CFG.model == 'CNNX4Model':
-        model = CNNX4Model(CFG.regularizer)
+    if CFG.model == 'CNNResidualNetwork':
+        model = CNNResidualNetwork(CFG.regularizer)
+    elif CFG.model == 'CNN160Model':
+        model = CNN160Model(CFG.regularizer)
+    elif CFG.model == 'CNN96Model':
+        model = CNN96Model(CFG.regularizer)
     else:
         raise ValueError(f'Unknown model from the config: {format(CFG.model)}')
 

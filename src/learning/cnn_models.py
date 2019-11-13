@@ -40,7 +40,67 @@ class CNNModelBase(ABC):
             self.train_op = train_op
 
 
-class CNNX2Model(CNNModelBase):
+class CNNResidualNetwork(CNNModelBase):
+
+    def __init__(self, reg_coef):
+        super().__init__(reg_coef)
+        self.setup_inputs()
+        self.setup_output()
+        self.setup_loss()
+
+    def _residual_block(self, x, size, dropout=False, dropout_prob=0.5, seed=None):
+        residual = tf.layers.batch_normalization(x, training=self.is_train)
+        residual = tf.nn.relu(residual)
+        residual = tf.layers.conv2d(residual, filters=size, kernel_size=3, strides=2, padding='same',
+                                    kernel_initializer=tf.keras.initializers.he_normal(seed=seed),
+                                    kernel_regularizer=tf.keras.regularizers.l2(self.reg_coef))
+        if dropout:
+            residual = tf.nn.dropout(residual, dropout_prob, seed=seed)
+        residual = tf.layers.batch_normalization(residual, training=self.is_train)
+        residual = tf.nn.relu(residual)
+        residual = tf.layers.conv2d(residual, filters=size, kernel_size=3, padding='same',
+                                    kernel_initializer=tf.keras.initializers.he_normal(seed=seed),
+                                    kernel_regularizer=tf.keras.regularizers.l2(self.reg_coef))
+        if dropout:
+            residual = tf.nn.dropout(residual, dropout_prob, seed=seed)
+
+        return residual
+
+    def _one_residual(self, x, keep_prob=0.5, seed=None):
+        nn = tf.layers.conv2d(x, filters=32, kernel_size=5, strides=2, padding='same',
+                              kernel_initializer=tf.keras.initializers.he_normal(seed=seed),
+                              kernel_regularizer=tf.keras.regularizers.l2(self.reg_coef))
+        nn = tf.layers.max_pooling2d(nn, pool_size=3, strides=2)
+
+        rb_1 = self._residual_block(nn, 32, dropout_prob=keep_prob, seed=seed)
+
+        nn = tf.layers.conv2d(nn, filters=32, kernel_size=1, strides=2, padding='same',
+                              kernel_initializer=tf.keras.initializers.he_normal(seed=seed),
+                              kernel_regularizer=tf.keras.regularizers.l2(self.reg_coef))
+        nn = tf.keras.layers.add([rb_1, nn])
+
+        nn = tf.layers.flatten(nn)
+
+        return nn
+
+    def setup_output(self):
+        seed = CFG.seed
+
+        x_shaped = tf.reshape(self.x, [-1, CFG.image_height, CFG.image_width, 1])
+        model = self._one_residual(x_shaped, seed=seed)
+        model = tf.layers.dense(model, units=64, activation=tf.nn.relu,
+                                kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
+                                bias_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed))
+        model = tf.layers.dense(model, units=32, activation=tf.nn.relu,
+                                kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
+                                bias_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed))
+
+        model = tf.layers.dense(model, 2)
+
+        self.output = model
+
+
+class CNN160Model(CNNModelBase):
 
     def __init__(self, reg_coef):
         super().__init__(reg_coef)
@@ -83,7 +143,7 @@ class CNNX2Model(CNNModelBase):
             return max_pool_layer
 
 
-class CNNX4Model(CNNModelBase):
+class CNN96Model(CNNModelBase):
 
     def __init__(self, reg_coef):
         super().__init__(reg_coef)
