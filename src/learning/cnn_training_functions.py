@@ -5,7 +5,7 @@ import os
 import h5py
 
 
-def load_data(file_path, train_or_test="training"):
+def load_real_data(file_path, train_or_test):
     """
     Loads images and velocities from hdf files and checks for potential mismatch in the number of images and velocities
     :param file_path: path to the hdf file from which it will extract the data
@@ -20,6 +20,20 @@ def load_data(file_path, train_or_test="training"):
 
         velocities = np.concatenate((vel_left[:, np.newaxis], vel_right[:, np.newaxis]), axis=1)
         images = data['images'][()]
+
+        print('The dataset is loaded: {} images and {} omega velocities.'.format(images.shape[0], velocities.shape[0]))
+
+    if not images.shape[0] == velocities.shape[0]:
+        raise ValueError("The number of images and velocities must be the same.")
+
+    return velocities, images
+
+
+def load_sim_data(file_path):
+    with h5py.File(file_path, 'r') as f:
+        data = f['split']['mix']
+        images = data['observation'][()]
+        velocities = data['action'][()]
 
         print('The dataset is loaded: {} images and {} omega velocities.'.format(images.shape[0], velocities.shape[0]))
 
@@ -162,6 +176,6 @@ class Trainer:
                     saver.save(self.sess,
                                os.path.join(model_path, 'model_{:04d}_{:.9f}'.format(epoch + 1, avg_test_loss)))
 
-                               # close summary writer
+            # close summary writers
             train_writer.close()
             test_writer.close()

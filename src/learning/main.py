@@ -3,7 +3,7 @@
 import time
 import os
 import argparse
-from src.learning.cnn_training_functions import load_data, Trainer
+from src.learning.cnn_training_functions import load_real_data, load_sim_data, Trainer
 from src.learning.cnn_models import CNNX2Model
 from src.utils.config import CFG
 
@@ -21,16 +21,20 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
-    # define path for training dataset
-    file_data_path = os.path.join(os.getcwd(), 'data', 'LF_dataset.h5')
+    # # define path for training dataset
+    # real_file_data_path = os.path.join(os.getcwd(), 'data', 'LF_dataset.h5')
+    #
+    # # read train data
+    # print('Reading train dataset')
+    # train_velocities, train_images = load_real_data(real_file_data_path, "training")
+    #
+    # # read test data
+    # print('Reading test dataset')
+    # test_velocities, test_images = load_real_data(real_file_data_path, "testing")
 
-    # read train data
-    print('Reading train dataset')
-    train_velocities, train_images = load_data(file_data_path, "training")
-
-    # read test data
-    print('Reading test dataset')
-    test_velocities, test_images = load_data(file_data_path, "testing")
+    sim_file_data_path = os.path.join(os.getcwd(), 'data', 'LF_dataset_sim.h5')
+    train_velocities, train_images = load_sim_data(sim_file_data_path)
+    test_velocities, test_images = train_velocities, train_images
 
     # construct the model name
     model_dir = 'learned_models'
