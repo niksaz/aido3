@@ -12,7 +12,7 @@ from src.utils.preprocessing import preprocess_image
 
 # Log configuration, you can pick your own values here
 # the more the better? or the smarter the better?
-EPISODES = 10
+EPISODES = 50
 STEPS = 1024
 
 DEBUG = False
@@ -76,6 +76,7 @@ def main():
             if DEBUG:
                 env.render()
         env.reset()
+        print(f'Finished {episode+1}/{EPISODES} episodes.')
 
     env.close()
 

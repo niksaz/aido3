@@ -4,7 +4,7 @@ import numpy as np
 
 # parameters for the pure pursuit controller
 POSITION_THRESHOLD = 0.04
-REF_VELOCITY = 0.7
+REF_VELOCITY = 0.8
 GAIN = 8
 FOLLOWING_DISTANCE = 0.4
 
@@ -45,5 +45,7 @@ class PurePursuitExpert:
 
         dot = np.dot(self.env.get_right_vec(), point_vec)
         steering = GAIN * -dot
+        velocity = abs(1.0 / steering)  # Inversely proportional to the steering angle
+        velocity = min(1.0, velocity)  # Cap at 1.0
 
-        return self.ref_velocity, steering
+        return velocity, steering
