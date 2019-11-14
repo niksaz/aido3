@@ -152,26 +152,41 @@ class CNN96Model(CNNModelBase):
         self.setup_loss()
 
     def setup_output(self):
+        seed = CFG.seed
         with tf.variable_scope('ConvNet', reuse=tf.AUTO_REUSE):
             x_shaped = tf.reshape(self.x, [-1, CFG.image_height, CFG.image_width, 1])
 
-            # define 1st convolutional layer
-            hl_conv_1 = tf.layers.conv2d(x_shaped, kernel_size=5, filters=2, padding="valid",
-                                         activation=tf.nn.relu, name="conv_layer_1")
+            hl_conv_1 = tf.layers.conv2d(x_shaped,
+                                         kernel_size=5,
+                                         filters=2,
+                                         padding="valid",
+                                         activation=tf.nn.relu,
+                                         kernel_initializer=tf.keras.initializers.he_normal(seed=seed),
+                                         kernel_regularizer=tf.keras.regularizers.l2(self.reg_coef),
+                                         name="conv_layer_1")
             max_pool_1 = tf.layers.max_pooling2d(hl_conv_1, pool_size=2, strides=2)
 
-            # define 2nd convolutional layer
-            hl_conv_2 = tf.layers.conv2d(max_pool_1, kernel_size=5, filters=8, padding="valid",
-                                         activation=tf.nn.relu, name="conv_layer_2")
+            hl_conv_2 = tf.layers.conv2d(max_pool_1,
+                                         kernel_size=5,
+                                         filters=8,
+                                         padding="valid",
+                                         activation=tf.nn.relu,
+                                         kernel_initializer=tf.keras.initializers.he_normal(seed=seed),
+                                         kernel_regularizer=tf.keras.regularizers.l2(self.reg_coef),
+                                         name="conv_layer_2",)
             max_pool_2 = tf.layers.max_pooling2d(hl_conv_2, pool_size=2, strides=2)
 
-            # flatten tensor to connect it with the fully connected layers
             conv_flat = tf.layers.flatten(max_pool_2)
 
-            # add 1st fully connected layers to the neural network
-            hl_fc_1 = tf.layers.dense(inputs=conv_flat, units=64, activation=tf.nn.relu, name="fc_layer_1")
+            hl_fc_1 = tf.layers.dense(inputs=conv_flat,
+                                      units=64,
+                                      activation=tf.nn.relu,
+                                      kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
+                                      bias_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
+                                      name="fc_layer_1")
 
-            # add 2nd fully connected layers to predict the driving commands
-            hl_fc_2 = tf.layers.dense(inputs=hl_fc_1, units=2, name="fc_layer_2")
+            hl_fc_2 = tf.layers.dense(inputs=hl_fc_1,
+                                      units=2,
+                                      name="fc_layer_2")
 
             self.output = hl_fc_2
