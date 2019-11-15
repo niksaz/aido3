@@ -5,16 +5,15 @@ import os
 import h5py
 
 
-def load_real_data(file_path, train_or_test):
+def load_real_data(file_path):
     """
     Loads images and velocities from hdf files and checks for potential mismatch in the number of images and velocities
     :param file_path: path to the hdf file from which it will extract the data
-           train_or_test: String specifies whether training or testset partition is loaded.
-    :return: velocities, images as numpy arrays
+    :return: images, velocities as numpy arrays
     """
     # read dataframes
     with h5py.File(file_path, 'r') as f:
-        data = f["split"][train_or_test]
+        data = f['split']['mix']
         vel_left = data['vel_left'][()]
         vel_right = data['vel_right'][()]
 
@@ -26,10 +25,13 @@ def load_real_data(file_path, train_or_test):
     if not images.shape[0] == velocities.shape[0]:
         raise ValueError("The number of images and velocities must be the same.")
 
-    return velocities, images
+    return images, velocities
 
 
 def load_sim_data(file_path):
+    """
+    :return: images, velocities as numpy arrays
+    """
     with h5py.File(file_path, 'r') as f:
         data = f['split']['mix']
         images = data['observation'][()]
@@ -40,7 +42,7 @@ def load_sim_data(file_path):
     if not images.shape[0] == velocities.shape[0]:
         raise ValueError("The number of images and velocities must be the same.")
 
-    return velocities, images
+    return images, velocities
 
 
 def form_model_name(batch_size, lr, optimizer, epochs):

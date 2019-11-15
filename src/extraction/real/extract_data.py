@@ -8,7 +8,7 @@ import collections
 import rosbag
 import cv_bridge
 from copy import copy
-from src.extraction.extract_data_functions import synchronize_data
+from src.extraction.real.extract_data_functions import synchronize_data
 from src.utils.preprocessing import preprocess_image
 
 # A collection of ros messages coming from a single topic.
@@ -168,11 +168,6 @@ def main():
 
     print("Synchronization of all data is finished.\n")
 
-    # define size of train dataset
-    train_size = int(0.9 * synch_data.shape[0])
-
-    # save train and test datasets to .h5 files
-
     # ATTENTION 1 !!
     #  If the datasets become too large, you could face memory errors on laptops.
     # If you face memory errors while saving the following files, split the data to multiple .h5 files.
@@ -188,55 +183,24 @@ def main():
     # first remove the previous file ad then save the new data.
 
     # define the name of the dataset .h5 file
-    dataset_name = os.path.join(data_directory, 'LF_dataset.h5')
+    dataset_name = os.path.join(data_directory, 'LF_dataset_real.h5')
 
     # check if file already exist in the data directory and if yes it is removed before saving the new file
     if os.path.isfile(dataset_name):
         os.remove(dataset_name)
 
-    print("Creating lane following training set")
     f = h5py.File(dataset_name, 'w')
-    description = """
-    This is a lane following training based on Rosbag logs. 
-    Attributes
-    ==========
-    Description: 
-    The dataset contains recording of Duckiebots driving around. Recorded are observed images, velocity commands 
-    for left and right wheels and the corresponding time stamps. 
-    Keys:
-    "vel_left": Recorded left wheel velocity command
-    "vel_right": Recorded right wheel velocity command
-    "bag_ID": ID of rosbag 
-    "img_timestamp":
-    "vel_timestamp":
-    Variants
-    ========
-    split: Split into 'training', 'test' datasets. There are {} training points and {} test points.
-    """.format(train_size, synch_data.shape[0] - train_size)
-
     variant = f.create_group('split')
-    # Training dataset
-    group = variant.create_group('training')
-    group.create_dataset(name='vel_left', data=synch_data[:train_size, 2], compression='gzip')
-    group.create_dataset(name='vel_right', data=synch_data[:train_size, 3], compression='gzip')
-    group.create_dataset(name='bag_ID', data=synch_data[:train_size, 4], compression='gzip')
-    group.create_dataset(name='img_timestamp', data=synch_data[:train_size, 0], compression='gzip')
-    group.create_dataset(name='vel_timestamp', data=synch_data[:train_size, 1], compression='gzip')
+    group = variant.create_group('mix')
+    group.create_dataset(name='vel_left', data=synch_data[:, 2], compression='gzip')
+    group.create_dataset(name='vel_right', data=synch_data[:, 3], compression='gzip')
+    group.create_dataset(name='bag_ID', data=synch_data[:, 4], compression='gzip')
+    group.create_dataset(name='img_timestamp', data=synch_data[:, 0], compression='gzip')
+    group.create_dataset(name='vel_timestamp', data=synch_data[:, 1], compression='gzip')
 
-    group.create_dataset(name='images', data=synch_imgs[:train_size], compression='gzip')
+    group.create_dataset(name='images', data=synch_imgs[:], compression='gzip')
 
-    # Testing dataset
-    group = variant.create_group('testing')
-    group.create_dataset(name='vel_left', data=synch_data[train_size:, 2], compression='gzip')
-    group.create_dataset(name='vel_right', data=synch_data[train_size:, 3], compression='gzip')
-    group.create_dataset(name='bag_ID', data=synch_data[train_size:, 4], compression='gzip')
-    group.create_dataset(name='img_timestamp', data=synch_data[train_size:, 0], compression='gzip')
-    group.create_dataset(name='vel_timestamp', data=synch_data[train_size:, 1], compression='gzip')
-
-    group.create_dataset(name='images', data=synch_imgs[train_size:], compression='gzip')
-
-    print("\nThe total {} data were split into {} training and {} test dataset points and saved in {} "
-          "directory.".format(synch_data.shape[0], train_size, synch_data.shape[0] - train_size, data_directory))
+    print("\nThe total {} dataset points were saved in {} directory.".format(synch_data.shape[0], data_directory))
 
 
 if __name__ == "__main__":

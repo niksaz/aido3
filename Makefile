@@ -12,7 +12,7 @@ docker_extract_data:
 # Extract data from docker container and copies it to the learning repository
 docker_copy_for_learning:
 				docker create -it --name dummy_for_copying extract_container:latest bash; \
-				docker cp dummy_for_copying:/workspace/data data; \
+				docker cp dummy_for_copying:/workspace/data/LF_dataset_real.h5 data/LF_dataset_real.h5; \
 				docker rm -fv dummy_for_copying;
 
 # ==================== FOR MODEL LEARNING ====================
