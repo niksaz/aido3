@@ -71,23 +71,20 @@ class Trainer:
         batch_losses = []
         i = 0
         while i <= data_size - 1:
-            # prepare batch
-            if i + self.batch_size <= data_size - 1:
-                train_x = x_data[i: i + self.batch_size]
-                train_y = y_data[i: i + self.batch_size]
-            else:
-                train_x = x_data[i:]
-                train_y = y_data[i:]
+            Xs = x_data[i: i + self.batch_size]
+            Ys = y_data[i: i + self.batch_size]
 
             if mode == 'train':
                 # train using the batch and calculate the loss
                 _, c = self.sess.run([model.train_op, model.task_loss],
-                                     feed_dict={model.x: train_x, model.true_output: train_y, model.is_train: True})
+                                     feed_dict={model.x: Xs, model.batch_size: len(Xs), model.drop_prob: 0.01,
+                                                model.true_output: Ys})
 
             elif mode == 'test':
                 # train using the batch and calculate the loss
                 c = self.sess.run([model.task_loss],
-                                  feed_dict={model.x: train_x, model.true_output: train_y, model.is_train: False})
+                                  feed_dict={model.x: Xs, model.batch_size: len(Xs), model.drop_prob: 0.0,
+                                             model.true_output: Ys})
 
             else:
                 raise NotImplementedError('Unknown mode: {}'.format(mode))

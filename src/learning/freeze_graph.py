@@ -1,6 +1,7 @@
 # Author: Mikita Sazanovich
 
 import os
+import shutil
 import argparse
 from tensorflow.python.tools import freeze_graph
 
@@ -67,6 +68,10 @@ def main() -> None:
         variable_names_blacklist
     )
     print("The frozen graph is saved in {}.".format(output_graph))
+
+    eval_graph_path = os.path.join(os.getcwd(), model_dir, 'frozen_graph.pb')
+    shutil.copy(output_graph, eval_graph_path)
+    print(f'The graph was copied for evaluation to {eval_graph_path}')
 
 
 if __name__ == '__main__':

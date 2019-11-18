@@ -7,7 +7,7 @@ CFG = edict()
 CFG.batch_size = 64
 CFG.epochs = 100
 CFG.lr = 1e-4
-CFG.regularizer = 1e-2
+CFG.regularizer = 1e-4
 CFG.seed = 603930
 
 CFG.model = 'CNN96Model'
