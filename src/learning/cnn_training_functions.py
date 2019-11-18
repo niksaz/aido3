@@ -1,8 +1,12 @@
-#!/usr/bin/env python
+# Author: Mikita Sazanovich
+
 import tensorflow as tf
 import numpy as np
 import os
 import h5py
+import logging
+
+logger = logging.getLogger()
 
 
 def load_real_data(file_path):
@@ -20,7 +24,8 @@ def load_real_data(file_path):
         velocities = np.concatenate((vel_left[:, np.newaxis], vel_right[:, np.newaxis]), axis=1)
         images = data['images'][()]
 
-        print('The dataset is loaded: {} images and {} omega velocities.'.format(images.shape[0], velocities.shape[0]))
+        logger.info(
+            'The dataset is loaded: {} images and {} omega velocities.'.format(images.shape[0], velocities.shape[0]))
 
     if not images.shape[0] == velocities.shape[0]:
         raise ValueError("The number of images and velocities must be the same.")
@@ -37,26 +42,13 @@ def load_sim_data(file_path):
         images = data['observation'][()]
         velocities = data['action'][()]
 
-        print('The dataset is loaded: {} images and {} omega velocities.'.format(images.shape[0], velocities.shape[0]))
+        logger.info(
+            'The dataset is loaded: {} images and {} omega velocities.'.format(images.shape[0], velocities.shape[0]))
 
     if not images.shape[0] == velocities.shape[0]:
         raise ValueError("The number of images and velocities must be the same.")
 
     return images, velocities
-
-
-def form_model_name(batch_size, lr, optimizer, epochs):
-    """
-    Creates name of model as a string, based on the defined hyperparameters used in training
-
-    :param batch_size: batch size
-    :param lr: learning rate
-    :param optimizer: optimizer (e.g. GDS, Adam )
-    :param epochs: number of epochs
-    :return: name of model as a string
-    """
-    # return "batch={},lr={},optimizer={},epochs={}_grayscale".format(batch_size, lr, optimizer, epochs)
-    return "batch={},lr={},optimizer={},epochs={}".format(batch_size, lr, optimizer, epochs)
 
 
 class Trainer:
@@ -105,19 +97,19 @@ class Trainer:
 
         return np.mean(batch_losses)
 
-    def train(self, model, model_dir, model_name, train_velocities, train_images, test_velocities, test_images):
+    def train(self, model, model_dir, train_velocities, train_images, test_velocities, test_images):
         seed = 76
         tf.random.set_random_seed(seed)
         np.random.seed(seed)
 
-        model_path = os.path.join(os.getcwd(), model_dir, model_name)
+        model_path = os.path.join(os.getcwd(), model_dir)
         logs_train_path = os.path.join(model_path, 'train')
         logs_test_path = os.path.join(model_path, 'test')
         graph_path = os.path.join(model_path, 'graph')
 
         man_loss_summary = tf.Summary()
         man_loss_summary.value.add(tag='Loss', simple_value=None)
-        saver = tf.train.Saver(max_to_keep=None)
+        saver = tf.train.Saver(max_to_keep=10)
 
         model.add_train_op(self.learning_rate)
 
@@ -164,19 +156,21 @@ class Trainer:
                 man_loss_summary.value[0].simple_value = avg_test_loss
                 test_writer.add_summary(man_loss_summary, epoch)
 
-                # update the best model
-                if best_test_mean_loss is None or best_test_mean_loss > avg_test_loss:
-                    best_test_mean_loss = avg_test_loss 
-                    saver.save(self.sess, os.path.join(model_path, 'best_model'))
-                    print('best_test_mean_loss = {:.9f} on epoch {:04d}'.format(best_test_mean_loss, epoch + 1))
+                # periodically print out the learning progress
+                print_inform_losses = (epoch + 1) % (self.epochs // 100) == 0
 
-                # periodically save the weights
-                if (epoch + 1) % (self.epochs // 10) == 0:
-                    print('Epoch: {:04d}, mean_train_loss = {:.9f}, mean_test_loss = {:.9f}'.format(epoch + 1,
-                                                                                                    avg_train_loss,
-                                                                                                    avg_test_loss))
-                    saver.save(self.sess,
-                               os.path.join(model_path, 'model_{:04d}_{:.9f}'.format(epoch + 1, avg_test_loss)))
+                # check if it is the best model
+                if best_test_mean_loss is None or best_test_mean_loss > avg_test_loss:
+                    logger.info('Saving since it will be the best model up to now')
+                    best_test_mean_loss = avg_test_loss
+                    saver.save(self.sess, os.path.join(model_path, 'model_{:04d}_{:.9f}'.format(epoch + 1, avg_test_loss)))
+                    saver.save(self.sess, os.path.join(model_path, 'best_model'))
+                    print_inform_losses = True
+
+                if print_inform_losses:
+                    logger.info(
+                        'Epoch: {:04d}, mean_train_loss = {:.9f}, mean_test_loss = {:.9f}'.format(
+                            epoch + 1, avg_train_loss, avg_test_loss))
 
             # close summary writers
             train_writer.close()

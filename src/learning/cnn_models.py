@@ -32,12 +32,14 @@ class CNNModelBase(ABC):
 
     def add_train_op(self, learning_rate):
         with tf.name_scope("Optimizer"):
-            optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=1e-4)
-            gradients, variables = zip(*optimizer.compute_gradients(self.loss))
-            self.grad_norm = tf.linalg.global_norm(gradients)
-            gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
-            train_op = optimizer.apply_gradients(zip(gradients, variables))
-            self.train_op = train_op
+            update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+            with tf.control_dependencies(update_ops):
+                optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+                gradients, variables = zip(*optimizer.compute_gradients(self.loss))
+                self.grad_norm = tf.linalg.global_norm(gradients)
+                gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
+                train_op = optimizer.apply_gradients(zip(gradients, variables))
+                self.train_op = train_op
 
 
 class CNNResidualNetwork(CNNModelBase):
@@ -151,42 +153,37 @@ class CNN96Model(CNNModelBase):
         self.setup_output()
         self.setup_loss()
 
+    def __add_conv_branch(self, x, kernel_size, filters, name):
+        with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
+            seed = CFG.seed
+            conv_layer = tf.layers.conv2d(x, kernel_size=kernel_size, filters=filters, padding='same', name=name,
+                                          kernel_initializer=tf.keras.initializers.he_normal(seed=seed),
+                                          kernel_regularizer=tf.keras.regularizers.l2(self.reg_coef))
+            norm_layer = tf.layers.batch_normalization(conv_layer, axis=3, training=self.is_train, name=f'{name}_normed')
+            actv_layer = tf.nn.relu(norm_layer, name=f'{name}_act')
+            pool_layer = tf.layers.max_pooling2d(actv_layer, pool_size=2, strides=2, name=f'{name}_pooled')
+            output = pool_layer
+        return output
+
     def setup_output(self):
         seed = CFG.seed
         with tf.variable_scope('ConvNet', reuse=tf.AUTO_REUSE):
-            x_shaped = tf.reshape(self.x, [-1, CFG.image_height, CFG.image_width, 1])
+            x_shaped = tf.reshape(self.x, [-1, CFG.image_height, CFG.image_width, 1], name='x_shaped')
+            x_normed = tf.layers.batch_normalization(x_shaped, axis=3, training=self.is_train, name='x_normed')
 
-            hl_conv_1 = tf.layers.conv2d(x_shaped,
-                                         kernel_size=5,
-                                         filters=2,
-                                         padding="same",
-                                         activation=tf.nn.relu,
-                                         kernel_initializer=tf.keras.initializers.he_normal(seed=seed),
-                                         kernel_regularizer=tf.keras.regularizers.l2(self.reg_coef),
-                                         name="conv_layer_1")
-            max_pool_1 = tf.layers.max_pooling2d(hl_conv_1, pool_size=2, strides=2)
+            conv_1 = self.__add_conv_branch(x_normed, kernel_size=5, filters=2, name='conv_1')
+            conv_2 = self.__add_conv_branch(conv_1, kernel_size=5, filters=8, name='conv_2')
 
-            hl_conv_2 = tf.layers.conv2d(max_pool_1,
-                                         kernel_size=5,
-                                         filters=8,
-                                         padding="same",
-                                         activation=tf.nn.relu,
-                                         kernel_initializer=tf.keras.initializers.he_normal(seed=seed),
-                                         kernel_regularizer=tf.keras.regularizers.l2(self.reg_coef),
-                                         name="conv_layer_2",)
-            max_pool_2 = tf.layers.max_pooling2d(hl_conv_2, pool_size=2, strides=2)
+            conv_flat = tf.layers.flatten(conv_2, name='conv_flat')
 
-            conv_flat = tf.layers.flatten(max_pool_2)
+            fc_layer_1 = tf.layers.dense(conv_flat, units=64, name='fc_layer_1',
+                                         kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
+                                         bias_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed))
+            fc_act_1 = tf.nn.relu(fc_layer_1, name='fc_act_1')
 
-            hl_fc_1 = tf.layers.dense(inputs=conv_flat,
-                                      units=64,
-                                      activation=tf.nn.relu,
-                                      kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
-                                      bias_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
-                                      name="fc_layer_1")
+            fc_layer_2 = tf.layers.dense(fc_act_1, units=2, name='fc_layer_2',
+                                         kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
+                                         bias_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed))
+            fc_act_2 = tf.nn.tanh(fc_layer_2, name='fc_act_2')
 
-            hl_fc_2 = tf.layers.dense(inputs=hl_fc_1,
-                                      units=2,
-                                      name="fc_layer_2")
-
-            self.output = hl_fc_2
+        self.output = fc_act_2
