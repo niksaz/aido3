@@ -27,7 +27,7 @@ def read_data(data_dir, real_filename, sim_filename):
     logger.info('Reading the sim dataset')
     XS, YS = load_sim_data(sim_file_data_path)
 
-    K = 100000
+    K = 15000
     XR = XR[:K]
     YR = YR[:K]
     XS = XS[:K]

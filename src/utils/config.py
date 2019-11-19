@@ -11,5 +11,5 @@ CFG.regularizer = 1e-4
 CFG.seed = 603930
 
 CFG.model = 'CNN96Model'
-CFG.image_width = 96
-CFG.image_height = 48
+CFG.image_width = 160
+CFG.image_height = 90

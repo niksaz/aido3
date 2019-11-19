@@ -18,10 +18,9 @@ STEPS = 1024
 DEBUG = False
 
 
-def save_dataset(samples):
-    dataset_dir = 'data'
+def save_dataset_as_h5(samples, dataset_dir, dataset_filename):
     os.makedirs(dataset_dir, exist_ok=True)
-    dataset_name = os.path.join(dataset_dir, 'LF_dataset_sim.h5')
+    dataset_name = os.path.join(dataset_dir, dataset_filename)
     # check if file already exist in the data directory and if yes it is removed before saving the new file
     if os.path.isfile(dataset_name):
         os.remove(dataset_name)
@@ -80,7 +79,7 @@ def main():
 
     env.close()
 
-    save_dataset(samples)
+    save_dataset_as_h5(samples, 'data', 'LF_dataset_sim.h5')
 
 
 if __name__ == '__main__':

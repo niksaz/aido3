@@ -77,7 +77,7 @@ class Trainer:
             if mode == 'train':
                 # train using the batch and calculate the loss
                 _, c = self.sess.run([model.train_op, model.task_loss],
-                                     feed_dict={model.x: Xs, model.batch_size: len(Xs), model.drop_prob: 0.01,
+                                     feed_dict={model.x: Xs, model.batch_size: len(Xs), model.drop_prob: 0.05,
                                                 model.true_output: Ys})
 
             elif mode == 'test':

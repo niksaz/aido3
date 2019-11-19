@@ -169,6 +169,11 @@ class CNN96Model(CNNModelBase):
 
             X = tf.layers.max_pooling2d(X, pool_size=2, strides=2, name='max_pool_2')
 
+            X = self.__add_conv_branch(X, kernel_size=5, filters=32, name='conv_5')
+            X = self.__add_conv_branch(X, kernel_size=5, filters=32, name='conv_6')
+
+            X = tf.layers.max_pooling2d(X, pool_size=2, strides=2, name='max_pool_3')
+
             X = tf.layers.flatten(X, name='conv_flat')
 
             X = tf.layers.dense(X, units=64, name='fc_layer_1',

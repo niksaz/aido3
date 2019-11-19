@@ -41,6 +41,29 @@ def extract_messages(path, requested_topics):
     return extracted_messages
 
 
+def save_dataset_as_h5(synch_data, synch_imgs, data_directory, dataset_filename):
+    if not os.path.exists(data_directory):
+        os.makedirs(data_directory)
+    dataset_name = os.path.join(data_directory, dataset_filename)
+
+    # check if file already exist in the data directory and if yes it is removed before saving the new file
+    if os.path.isfile(dataset_name):
+        os.remove(dataset_name)
+
+    f = h5py.File(dataset_name, 'w')
+    variant = f.create_group('split')
+    group = variant.create_group('mix')
+    group.create_dataset(name='vel_left', data=synch_data[:, 2], compression='gzip')
+    group.create_dataset(name='vel_right', data=synch_data[:, 3], compression='gzip')
+    group.create_dataset(name='bag_ID', data=synch_data[:, 4], compression='gzip')
+    group.create_dataset(name='img_timestamp', data=synch_data[:, 0], compression='gzip')
+    group.create_dataset(name='vel_timestamp', data=synch_data[:, 1], compression='gzip')
+
+    group.create_dataset(name='images', data=synch_imgs[:], compression='gzip')
+
+    print("\nThe total {} dataset points were saved in {} directory.".format(synch_data.shape[0], data_directory))
+
+
 def main():
     # define the list of topics that you want to extract
     ros_topics = [
@@ -53,11 +76,6 @@ def main():
 
     # define the bags_directory in order to extract the data
     bags_directory = os.path.join(os.getcwd(), "data", "bag_files")
-
-    # define data_directory
-    data_directory = 'data'
-    if not os.path.exists(data_directory):
-        os.makedirs(data_directory)
 
     cvbridge_object = cv_bridge.CvBridge()
 
@@ -182,25 +200,7 @@ def main():
     # the key does not change, we will check if the .h5 file exists before saving the new data, and if it exists we will
     # first remove the previous file ad then save the new data.
 
-    # define the name of the dataset .h5 file
-    dataset_name = os.path.join(data_directory, 'LF_dataset_real.h5')
-
-    # check if file already exist in the data directory and if yes it is removed before saving the new file
-    if os.path.isfile(dataset_name):
-        os.remove(dataset_name)
-
-    f = h5py.File(dataset_name, 'w')
-    variant = f.create_group('split')
-    group = variant.create_group('mix')
-    group.create_dataset(name='vel_left', data=synch_data[:, 2], compression='gzip')
-    group.create_dataset(name='vel_right', data=synch_data[:, 3], compression='gzip')
-    group.create_dataset(name='bag_ID', data=synch_data[:, 4], compression='gzip')
-    group.create_dataset(name='img_timestamp', data=synch_data[:, 0], compression='gzip')
-    group.create_dataset(name='vel_timestamp', data=synch_data[:, 1], compression='gzip')
-
-    group.create_dataset(name='images', data=synch_imgs[:], compression='gzip')
-
-    print("\nThe total {} dataset points were saved in {} directory.".format(synch_data.shape[0], data_directory))
+    save_dataset_as_h5(synch_data, synch_imgs, 'data', 'LF_dataset_real.h5')
 
 
 if __name__ == "__main__":
