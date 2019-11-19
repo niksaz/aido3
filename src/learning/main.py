@@ -9,6 +9,7 @@ import sklearn.model_selection
 import numpy as np
 import logging
 
+from src.learning.dataset import CombinedDataset, Dataset
 from src.learning.cnn_models import CNNResidualNetwork, CNN160Model, CNN96Model
 from src.learning.cnn_training_functions import load_real_data, load_sim_data, Trainer
 from src.utils.config import CFG
@@ -49,6 +50,20 @@ def read_data(data_dir, real_filename, sim_filename):
     return X_train, X_test, Y_train, Y_test
 
 
+def configure_logging(model_dir):
+    logger.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s  %(name)s  %(levelname)s: %(message)s', "%Y-%m-%d %H:%M:%S")
+
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+
+    filename = os.path.join(model_dir, 'log.txt')
+    file_handler = logging.FileHandler(filename)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument('model_name', type=str, help='The name of the trained model')
@@ -64,15 +79,16 @@ def main() -> None:
         shutil.rmtree(model_dir)
     os.makedirs(model_dir)
 
-    filename = os.path.join(model_dir, 'log.txt')
-    logger.setLevel(logging.INFO)
-    logger.addHandler(logging.StreamHandler())
-    logger.addHandler(logging.FileHandler(filename))
+    configure_logging(model_dir)
 
-    train_images, test_images, train_velocities, test_velocities = read_data(
-        'data', 'LF_dataset_real.h5', 'LF_dataset_sim.h5')
+    real_dataset = Dataset(os.path.join('data', 'real'))
+    sim_dataset = Dataset(os.path.join('data', 'sim'))
+    dataset = CombinedDataset([real_dataset, sim_dataset])
+    logger.info(f'Real dataset size if {len(real_dataset)}')
+    logger.info(f'Sim dataset size is {len(sim_dataset)}')
+    logger.info(f'CombinedDataset size is {len(dataset)}')
 
-    logger.info('Starting training for {} model.'.format(args.model_name))
+    logger.info('Starting training for {} model'.format(args.model_name))
     start_time = time.time()
 
     # create and train the model
@@ -86,12 +102,12 @@ def main() -> None:
         raise ValueError(f'Unknown model from the config: {format(CFG.model)}')
 
     trainer = Trainer(CFG.batch_size, CFG.epochs, CFG.lr)
-    trainer.train(model, model_dir, train_velocities, train_images, test_velocities, test_images)
+    trainer.train(model, model_dir, dataset)
 
     # calculate total training time in minutes
     training_time = (time.time() - start_time) / 60
 
-    logger.info('Finished training of {} in {:.1f} minutes.'.format(args.model_name, training_time))
+    logger.info('Finished training of {} in {:.1f} minutes'.format(args.model_name, training_time))
 
 
 if __name__ == '__main__':

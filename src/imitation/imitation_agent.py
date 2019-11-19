@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from dataclasses import dataclass
+from collections import deque
 
 import tensorflow as tf
 import numpy as np
@@ -9,7 +10,8 @@ from aido_schemas import EpisodeStart, protocol_agent_duckiebot1, PWMCommands, D
     wrap_direct, Context, Duckiebot1Observations, JPGImage
 
 from src.imitation.graph_utils import load_graph
-from src.utils.preprocessing import preprocess_image
+from src.utils.preprocessing import preprocess_image, prepare_for_the_model
+from src.utils.config import CFG
 
 
 @dataclass
@@ -24,6 +26,11 @@ class ImitationAgent:
 
     def init(self, context: Context):
         context.info('init()')
+        max_shift = 0
+        for shift in CFG.input_indices:
+            max_shift = max(max_shift, abs(-1 + shift))
+        self.memory_size = max_shift
+        self.imgs = deque(maxlen=self.memory_size)
 
     def on_received_seed(self, data: int):
         np.random.seed(data)
@@ -36,10 +43,15 @@ class ImitationAgent:
         self.config.current_image = jpg2rgb(camera.jpg_data)
 
     def compute_action(self, observation):
+        observation = prepare_for_the_model(preprocess_image(observation))
+        self.imgs.append(observation)
+        while len(self.imgs) < self.memory_size:
+            self.imgs.append(observation)
+
         frozen_model_filename = "frozen_graph.pb"
 
-        # We use our "load_graph" function
-        graph = load_graph(frozen_model_filename)
+        # We use our "load_graph" function to load the graph
+        self.graph = load_graph(frozen_model_filename)
 
         # To check which operations your network is using
         # uncomment the following commands:
@@ -48,20 +60,25 @@ class ImitationAgent:
         #     print(op.name)
 
         # We access the input and output nodes
-        x = graph.get_tensor_by_name('prefix/x:0')
-        batch_size = graph.get_tensor_by_name('prefix/batch_size:0')
-        drop_prob = graph.get_tensor_by_name('prefix/drop_prob:0')
-        y = graph.get_tensor_by_name('prefix/ConvNet/fc_layer_2/BiasAdd:0')
-        # We launch a Session
-        with tf.Session(graph=graph) as sess:
-            # Additionally img is converted to greyscale
-            observation = preprocess_image(observation)
-            # this outputs omega, the desired angular velocity
-            action = sess.run(y, feed_dict={
-                x: observation,
-                batch_size: 1,
-                drop_prob: 0.0,
-            })
+        self.x = self.graph.get_tensor_by_name('prefix/x:0')
+        self.batch_size = self.graph.get_tensor_by_name('prefix/batch_size:0')
+        self.drop_prob = self.graph.get_tensor_by_name('prefix/drop_prob:0')
+        self.y = self.graph.get_tensor_by_name('prefix/ConvNet/fc_layer_2/BiasAdd:0')
+
+        with tf.Session(graph=self.graph) as sess:
+            X = []
+            for shift in CFG.input_indices:
+                x = self.imgs[-1 + shift]
+                X.append(x)
+            X = np.stack(X, axis=2)
+            X = np.expand_dims(X, axis=0)
+
+            action = sess.run(
+                self.y,
+                feed_dict={
+                    self.x: X,
+                    self.batch_size: 1,
+                    self.drop_prob: 0.0})
             action = [action[0, 0], action[0, 1]]
 
             return action

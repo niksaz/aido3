@@ -1,15 +1,12 @@
 #!/usr/bin/env python
 
 import numpy as np
-import pandas as pd
-from copy import copy
 
 
 def synchronize_data(df_imgs, df_cmds, bag_ID):
     # initialize a dataframe to append all new values
-    synch_data = pd.DataFrame()
-
-    first_time = True
+    synch_data = []
+    synch_imgs = []
 
     # for each omega velocity, find the respective image
     for cmd_index, cmd_time in enumerate(df_cmds['vel_timestamp']):
@@ -33,32 +30,24 @@ def synchronize_data(df_imgs, df_cmds, bag_ID):
                     img_index = img_index - 1
 
                 # create a numpy array for all data except the images
-                temp_data = np.array([[
+                temp_data = [
                     df_imgs['img_timestamp'][img_index],
                     df_cmds["vel_timestamp"][cmd_index],
                     df_cmds['vel_left'][cmd_index],
                     df_cmds['vel_right'][cmd_index],
-                    bag_ID
-                ]])
+                    bag_ID,
+                ]
 
                 # create a new numpy array only for images (images are row vectors of size (1,4608) and it is more
                 # convenient to save them separately
-                temp_imgs = df_imgs['img'][img_index]
+                temp_img = df_imgs['img'][img_index]
 
-                if first_time:
-
-                    synch_data = copy(temp_data)
-                    synch_imgs = copy(temp_imgs)
-                    first_time = False
-
-                else:
-
-                    synch_data = np.vstack((synch_data, temp_data))
-                    synch_imgs = np.vstack((synch_imgs, temp_imgs))
+                synch_data.append(temp_data)
+                synch_imgs.append(temp_img)
 
     print(
         "Synchronization of {}.bag file is finished. From the initial {} images and {} velocities commands, the extracted "
-        "synchronized data are {}.".format(bag_ID, df_imgs.shape[0], df_cmds.shape[0], synch_data.shape[0]))
+        "synchronized data are {}.".format(bag_ID, df_imgs.shape[0], df_cmds.shape[0], len(synch_data)))
 
     # return the synchronized data to the main function
     return synch_data, synch_imgs

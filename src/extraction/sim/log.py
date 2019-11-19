@@ -1,9 +1,12 @@
 # Author: Mikita Sazanovich
 
 import os
+import shutil
 
 import h5py
 import numpy as np
+import cv2
+import pickle
 
 from src.extraction.sim.env import launch_env
 from src.extraction.sim.helpers import SteeringToWheelVelWrapper
@@ -45,6 +48,24 @@ def save_dataset_as_h5(samples, dataset_dir, dataset_filename):
     group.create_dataset(name='done', data=dones, compression='gzip')
 
 
+def save_dataset_as_files(samples, boundaries, dataset_dir):
+    dataset_dir = os.path.join(dataset_dir, 'sim')
+    if os.path.exists(dataset_dir):
+        shutil.rmtree(dataset_dir)
+    os.makedirs(dataset_dir)
+
+    for i, sample in enumerate(samples):
+        sample_filename = os.path.join(dataset_dir, f'{i}.png')
+        cv2.imwrite(sample_filename, sample[0])
+        action_filename = os.path.join(dataset_dir, f'{i}.npy')
+        action = sample[1].astype(np.float32)
+        np.save(action_filename, action)
+
+    meta_filename = os.path.join(dataset_dir, 'meta.pk')
+    with open(meta_filename, 'wb') as file_out:
+        pickle.dump(boundaries, file_out, protocol=2)
+
+
 def main():
     env = launch_env()
 
@@ -55,8 +76,10 @@ def main():
     expert = PurePursuitExpert(env=env)
 
     samples = []
+    boundaries = []
     # let's collect our samples
     for episode in range(EPISODES):
+        episode_samples = []
         for steps in range(STEPS):
             # we use our 'expert' to predict the next action.
             action = expert.predict(None)
@@ -69,17 +92,21 @@ def main():
                 break
 
             observation = preprocess_image(observation)
-            observation = observation.reshape((-1))
-            samples.append([observation, action, reward, done, info])
+            episode_samples.append([observation, action, reward, done, info])
 
             if DEBUG:
                 env.render()
         env.reset()
         print(f'Finished {episode+1}/{EPISODES} episodes.')
 
+        samples_start = len(samples)
+        samples.extend(episode_samples)
+        samples_end = len(samples)
+        boundaries.append([samples_start, samples_end])
+
     env.close()
 
-    save_dataset_as_h5(samples, 'data', 'LF_dataset_sim.h5')
+    save_dataset_as_files(samples, boundaries, 'data')
 
 
 if __name__ == '__main__':

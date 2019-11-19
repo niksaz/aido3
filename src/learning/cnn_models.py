@@ -13,7 +13,9 @@ class CNNModelBase(ABC):
 
     def setup_inputs(self):
         # define placeholder variable for input images
-        self.x = tf.placeholder(tf.float32, shape=[None, CFG.image_height * CFG.image_width], name='x')
+        self.x = tf.placeholder(tf.float32,
+                                shape=[None, CFG.image_height, CFG.image_width, len(CFG.input_indices)],
+                                name='x')
         self.batch_size = tf.placeholder(tf.int32, shape=(), name='batch_size')
         self.drop_prob = tf.placeholder(tf.float32, shape=(), name='drop_prob')
 
@@ -157,7 +159,7 @@ class CNN96Model(CNNModelBase):
     def setup_output(self):
         seed = CFG.seed
         with tf.variable_scope('ConvNet', reuse=tf.AUTO_REUSE):
-            X = tf.reshape(self.x, [-1, CFG.image_height, CFG.image_width, 1], name='x_shaped')
+            X = self.x
 
             X = self.__add_conv_branch(X, kernel_size=5, filters=2, name='conv_1')
             X = self.__add_conv_branch(X, kernel_size=5, filters=2, name='conv_2')

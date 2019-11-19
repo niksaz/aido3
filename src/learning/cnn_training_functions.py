@@ -6,6 +6,8 @@ import os
 import h5py
 import logging
 
+from src.utils.config import CFG
+
 logger = logging.getLogger()
 
 
@@ -58,32 +60,37 @@ class Trainer:
         self.learning_rate = learning_rate
         self.sess = None
 
-    def __run_epoch_for(self, model, data_size, x_data, y_data, mode):
+    def __run_epoch_for(self, model, dataset, data_indices, mode):
         """
-        For each epoch extract batches and execute train or test step depending on the inserted mode
+        For each epoch extract batches and execute train or test step depending on the mode
 
-        :param data_size: number of velocities and images
-        :param x_data: images
-        :param y_data: velocities
         :param mode: 'train' or 'test' in order to define if backpropagation is executed as well or not
         :return: mean of losses for the epoch
         """
         batch_losses = []
-        i = 0
-        while i <= data_size - 1:
-            Xs = x_data[i: i + self.batch_size]
-            Ys = y_data[i: i + self.batch_size]
+        for i in range(0, len(data_indices), self.batch_size):
+            Xs = []
+            Ys = []
+            for index in data_indices[i:i + self.batch_size]:
+                img_input, actions = dataset[index]
+                Xs.append(img_input)
+                Ys.append(actions)
+            Xs = np.array(Xs)
+            Ys = np.array(Ys)
 
             if mode == 'train':
                 # train using the batch and calculate the loss
                 _, c = self.sess.run([model.train_op, model.task_loss],
-                                     feed_dict={model.x: Xs, model.batch_size: len(Xs), model.drop_prob: 0.05,
+                                     feed_dict={model.x: Xs,
+                                                model.batch_size: len(Xs),
+                                                model.drop_prob: 0.05,
                                                 model.true_output: Ys})
-
             elif mode == 'test':
                 # train using the batch and calculate the loss
                 c = self.sess.run([model.task_loss],
-                                  feed_dict={model.x: Xs, model.batch_size: len(Xs), model.drop_prob: 0.0,
+                                  feed_dict={model.x: Xs,
+                                             model.batch_size: len(Xs),
+                                             model.drop_prob: 0.0,
                                              model.true_output: Ys})
 
             else:
@@ -94,10 +101,18 @@ class Trainer:
 
         return np.mean(batch_losses)
 
-    def train(self, model, model_dir, train_velocities, train_images, test_velocities, test_images):
+    def train(self, model, model_dir, dataset):
         seed = 76
         tf.random.set_random_seed(seed)
         np.random.seed(seed)
+
+        indices = np.arange(len(dataset))
+        np.random.shuffle(indices)
+        train_index_limit = int(len(dataset) * CFG.train_data_ratio)
+        train_indices = indices[:train_index_limit]
+        test_indices = indices[train_index_limit:]
+        logger.info(f'The len of the train data is {len(train_indices)}')
+        logger.info(f'The len of the test data is {len(test_indices)}')
 
         model_path = os.path.join(os.getcwd(), model_dir)
         logs_train_path = os.path.join(model_path, 'train')
@@ -133,23 +148,16 @@ class Trainer:
             best_test_mean_loss = None
 
             for epoch in range(self.epochs):
-                p = np.random.permutation(len(train_images))
-                train_images = train_images[p]
-                train_velocities = train_velocities[p]
+                # shuffle the training data each epoch; no need to shuffle the test data
+                np.random.shuffle(train_indices)
 
                 # run train cycle
-                avg_train_loss = self.__run_epoch_for(model, train_velocities.shape[0], train_images, train_velocities,
-                                                      'train')
-
-                # save the training loss using the manual summaries
+                avg_train_loss = self.__run_epoch_for(model, dataset, train_indices, 'train')
                 man_loss_summary.value[0].simple_value = avg_train_loss
                 train_writer.add_summary(man_loss_summary, epoch)
 
                 # run test cycle
-                avg_test_loss = self.__run_epoch_for(model, test_velocities.shape[0], test_images, test_velocities,
-                                                     'test')
-
-                # save the test errors using the manual summaries
+                avg_test_loss = self.__run_epoch_for(model, dataset, test_indices, 'test')
                 man_loss_summary.value[0].simple_value = avg_test_loss
                 test_writer.add_summary(man_loss_summary, epoch)
 

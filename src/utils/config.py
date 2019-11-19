@@ -4,6 +4,9 @@ from easydict import EasyDict as edict
 
 CFG = edict()
 
+CFG.input_indices = [0, -10]
+CFG.train_data_ratio = 0.7
+
 CFG.batch_size = 64
 CFG.epochs = 100
 CFG.lr = 1e-4
