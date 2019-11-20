@@ -4,7 +4,7 @@ from easydict import EasyDict as edict
 
 CFG = edict()
 
-CFG.input_indices = [0, -10]
+CFG.input_indices = [0]
 CFG.train_data_ratio = 0.7
 
 CFG.batch_size = 64

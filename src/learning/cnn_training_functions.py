@@ -1,56 +1,14 @@
 # Author: Mikita Sazanovich
 
-import tensorflow as tf
-import numpy as np
-import os
-import h5py
 import logging
+import os
+
+import numpy as np
+import tensorflow as tf
 
 from src.utils.config import CFG
 
 logger = logging.getLogger()
-
-
-def load_real_data(file_path):
-    """
-    Loads images and velocities from hdf files and checks for potential mismatch in the number of images and velocities
-    :param file_path: path to the hdf file from which it will extract the data
-    :return: images, velocities as numpy arrays
-    """
-    # read dataframes
-    with h5py.File(file_path, 'r') as f:
-        data = f['split']['mix']
-        vel_left = data['vel_left'][()]
-        vel_right = data['vel_right'][()]
-
-        velocities = np.concatenate((vel_left[:, np.newaxis], vel_right[:, np.newaxis]), axis=1)
-        images = data['images'][()]
-
-        logger.info(
-            'The dataset is loaded: {} images and {} omega velocities.'.format(images.shape[0], velocities.shape[0]))
-
-    if not images.shape[0] == velocities.shape[0]:
-        raise ValueError("The number of images and velocities must be the same.")
-
-    return images, velocities
-
-
-def load_sim_data(file_path):
-    """
-    :return: images, velocities as numpy arrays
-    """
-    with h5py.File(file_path, 'r') as f:
-        data = f['split']['mix']
-        images = data['observation'][()]
-        velocities = data['action'][()]
-
-        logger.info(
-            'The dataset is loaded: {} images and {} omega velocities.'.format(images.shape[0], velocities.shape[0]))
-
-    if not images.shape[0] == velocities.shape[0]:
-        raise ValueError("The number of images and velocities must be the same.")
-
-    return images, velocities
 
 
 class Trainer:

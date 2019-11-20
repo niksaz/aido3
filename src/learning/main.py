@@ -19,37 +19,6 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 logger = logging.getLogger()
 
 
-def read_data(data_dir, real_filename, sim_filename):
-    real_file_data_path = os.path.join(os.getcwd(), data_dir, real_filename)
-    sim_file_data_path = os.path.join(os.getcwd(), data_dir, sim_filename)
-
-    logger.info('Reading the real dataset')
-    XR, YR = load_real_data(real_file_data_path)
-    logger.info('Reading the sim dataset')
-    XS, YS = load_sim_data(sim_file_data_path)
-
-    K = 15000
-    XR = XR[:K]
-    YR = YR[:K]
-    XS = XS[:K]
-    YS = YS[:K]
-
-    XR_train, XR_test, YR_train, YR_test = sklearn.model_selection.train_test_split(
-        XR, YR, train_size=0.7, random_state=CFG.seed)
-    logger.info(f'Real dataset split is {len(XR_train)} in train, {len(XR_test)} in test')
-
-    XS_train, XS_test, YS_train, YS_test = sklearn.model_selection.train_test_split(
-        XS, YS, train_size=0.7, random_state=CFG.seed)
-    logger.info(f'Real dataset split is {len(XS_train)} in train, {len(XS_test)} in test')
-
-    X_train = np.vstack([XR_train, XS_train])
-    X_test = np.vstack([XR_test, XS_test])
-    Y_train = np.vstack([YR_train, YS_train])
-    Y_test = np.vstack([YR_test, YS_test])
-    logger.info(f'Overall split is {len(X_train)} in train, {len(X_test)} in test')
-    return X_train, X_test, Y_train, Y_test
-
-
 def configure_logging(model_dir):
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s  %(name)s  %(levelname)s: %(message)s', "%Y-%m-%d %H:%M:%S")
@@ -84,7 +53,7 @@ def main() -> None:
     real_dataset = Dataset(os.path.join('data', 'real'))
     sim_dataset = Dataset(os.path.join('data', 'sim'))
     dataset = CombinedDataset([real_dataset, sim_dataset])
-    logger.info(f'Real dataset size if {len(real_dataset)}')
+    logger.info(f'Real dataset size is {len(real_dataset)}')
     logger.info(f'Sim dataset size is {len(sim_dataset)}')
     logger.info(f'CombinedDataset size is {len(dataset)}')
 

@@ -5,6 +5,7 @@ from collections import deque
 
 import tensorflow as tf
 import numpy as np
+import time
 
 from aido_schemas import EpisodeStart, protocol_agent_duckiebot1, PWMCommands, Duckiebot1Commands, LEDSCommands, RGB, \
     wrap_direct, Context, Duckiebot1Observations, JPGImage
@@ -25,6 +26,7 @@ class ImitationAgent:
     config: ImitationAgentConfig = ImitationAgentConfig()
 
     def init(self, context: Context):
+        print(time.time(), 'init')
         context.info('init()')
         max_shift = 0
         for shift in CFG.input_indices:
@@ -33,16 +35,20 @@ class ImitationAgent:
         self.imgs = deque(maxlen=self.memory_size)
 
     def on_received_seed(self, data: int):
+        print(time.time(), 'on_received_seed')
         np.random.seed(data)
 
     def on_received_episode_start(self, context: Context, data: EpisodeStart):
+        print(time.time(), 'on_received_episode_start')
         context.info(f'Starting episode "{data.episode_name}".')
 
     def on_received_observations(self, data: Duckiebot1Observations):
+        print(time.time(), 'on_received_observations')
         camera: JPGImage = data.camera
         self.config.current_image = jpg2rgb(camera.jpg_data)
 
     def compute_action(self, observation):
+        print(time.time(), 'compute_action')
         observation = prepare_for_the_model(preprocess_image(observation))
         self.imgs.append(observation)
         while len(self.imgs) < self.memory_size:
@@ -84,6 +90,7 @@ class ImitationAgent:
             return action
 
     def on_received_get_commands(self, context: Context):
+        print(time.time(), 'on_received_get_commands')
         # l, u = self.config.pwm_left_interval
         # pwm_left = np.random.uniform(l, u)
         # l, u = self.config.pwm_right_interval
@@ -99,6 +106,7 @@ class ImitationAgent:
         context.write('commands', commands)
 
     def finish(self, context: Context):
+        print(time.time(), 'finish')
         context.info('finish()')
 
 
