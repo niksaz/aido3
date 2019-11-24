@@ -1,17 +1,14 @@
 #!/usr/bin/env python
 
 import argparse
+import logging
 import os
 import shutil
 import time
 
-import sklearn.model_selection
-import numpy as np
-import logging
-
-from src.learning.dataset import CombinedDataset, Dataset
 from src.learning.cnn_models import CNNResidualNetwork, CNN160Model, CNN96Model
-from src.learning.cnn_training_functions import load_real_data, load_sim_data, Trainer
+from src.learning.cnn_training_functions import Trainer
+from src.learning.dataset import CombinedDataset, Dataset
 from src.utils.config import CFG
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"

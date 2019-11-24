@@ -1,22 +1,19 @@
 # Author: Mikita Sazanovich
 
 import numpy as np
+import scipy.stats as stats
 
 # parameters for the pure pursuit controller
-POSITION_THRESHOLD = 0.04
-REF_VELOCITY = 0.8
+PEAK_VELOCITY = 1.0
 GAIN = 8
-FOLLOWING_DISTANCE = 0.4
+FOLLOWING_DISTANCE = 0.5
 
 
 class PurePursuitExpert:
-    def __init__(self, env, ref_velocity=REF_VELOCITY, position_threshold=POSITION_THRESHOLD,
-                 following_distance=FOLLOWING_DISTANCE, max_iterations=1000):
+    def __init__(self, env, following_distance=FOLLOWING_DISTANCE, max_iterations=1000):
         self.env = env
         self.following_distance = following_distance
         self.max_iterations = max_iterations
-        self.ref_velocity = ref_velocity
-        self.position_threshold = position_threshold
 
     def predict(self, observation):  # we don't really care about the observation for this implementation
         closest_point, closest_tangent = self.env.closest_curve_point(self.env.cur_pos, self.env.cur_angle)
@@ -45,7 +42,11 @@ class PurePursuitExpert:
 
         dot = np.dot(self.env.get_right_vec(), point_vec)
         steering = GAIN * -dot
-        velocity = abs(1.0 / steering)  # Inversely proportional to the steering angle
-        velocity = min(1.0, velocity)  # Cap at 1.0
-
+        velocity = (PurePursuitExpert.__get_speed_density_at(steering)
+                    / PurePursuitExpert.__get_speed_density_at(0.0)
+                    * PEAK_VELOCITY)
         return velocity, steering
+
+    @staticmethod
+    def __get_speed_density_at(x):
+        return stats.norm.pdf(x, 0.0, 1.0)

@@ -1,8 +1,9 @@
 # Author: Mikita Sazanovich
 
+import argparse
 import os
 import shutil
-import argparse
+
 from tensorflow.python.tools import freeze_graph
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"

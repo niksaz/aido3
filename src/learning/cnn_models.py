@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 
 import tensorflow as tf
+
 from src.utils.config import CFG
 
 
@@ -162,19 +163,19 @@ class CNN96Model(CNNModelBase):
             X = self.x
 
             X = self.__add_conv_branch(X, kernel_size=5, filters=2, name='conv_1')
-            X = self.__add_conv_branch(X, kernel_size=5, filters=2, name='conv_2')
-
             X = tf.layers.max_pooling2d(X, pool_size=2, strides=2, name='max_pool_1')
 
-            X = self.__add_conv_branch(X, kernel_size=5, filters=8, name='conv_3')
-            X = self.__add_conv_branch(X, kernel_size=5, filters=8, name='conv_4')
-
+            X = self.__add_conv_branch(X, kernel_size=5, filters=12, name='conv_2')
             X = tf.layers.max_pooling2d(X, pool_size=2, strides=2, name='max_pool_2')
 
-            X = self.__add_conv_branch(X, kernel_size=5, filters=32, name='conv_5')
-            X = self.__add_conv_branch(X, kernel_size=5, filters=32, name='conv_6')
-
+            X = self.__add_conv_branch(X, kernel_size=5, filters=24, name='conv_3')
             X = tf.layers.max_pooling2d(X, pool_size=2, strides=2, name='max_pool_3')
+
+            X = self.__add_conv_branch(X, kernel_size=5, filters=36, name='conv_4')
+            X = tf.layers.max_pooling2d(X, pool_size=2, strides=2, name='max_pool_4')
+
+            X = self.__add_conv_branch(X, kernel_size=5, filters=48, name='conv_5')
+            X = tf.layers.max_pooling2d(X, pool_size=2, strides=2, name='max_pool_5')
 
             X = tf.layers.flatten(X, name='conv_flat')
 

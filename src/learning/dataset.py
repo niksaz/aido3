@@ -4,11 +4,11 @@ import os
 import pickle
 from typing import List
 
-import numpy as np
 import cv2
+import numpy as np
 
-from src.utils.preprocessing import prepare_for_the_model
 from src.utils.config import CFG
+from src.utils.preprocessing import prepare_for_the_model
 
 
 class Dataset:
