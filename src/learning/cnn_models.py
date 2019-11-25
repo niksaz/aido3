@@ -18,7 +18,9 @@ class CNNModelBase(ABC):
                                 shape=[None, CFG.image_height, CFG.image_width, len(CFG.input_indices)],
                                 name='x')
         self.batch_size = tf.placeholder(tf.int32, shape=(), name='batch_size')
-        self.drop_prob = tf.placeholder(tf.float32, shape=(), name='drop_prob')
+        self.early_drop_prob = tf.placeholder(tf.float32, shape=(), name='early_drop_prob')
+        self.late_drop_prob = tf.placeholder(tf.float32, shape=(), name='late_drop_prob')
+        self.is_train = tf.placeholder(tf.bool, shape=(), name='is_train')
 
         # define placeholder for the true omega velocities
         # [None: tensor may hold arbitrary num of velocities, number of omega predictions for each image]
@@ -161,39 +163,53 @@ class CNN96Model(CNNModelBase):
         seed = CFG.seed
         with tf.variable_scope('ConvNet', reuse=tf.AUTO_REUSE):
             X = self.x
+            X = tf.layers.batch_normalization(
+                X, axis=3, training=self.is_train, name='normalize')
 
-            X = self.__add_conv_branch(X, kernel_size=5, filters=2, name='conv_1')
-            X = tf.layers.max_pooling2d(X, pool_size=2, strides=2, name='max_pool_1')
+            X = self.__add_conv_branch(
+                X, kernel_size=5, filters=2, drop_prob=self.early_drop_prob, name='conv_1')
+            X = tf.layers.max_pooling2d(
+                X, pool_size=2, strides=2, name='max_pool_1')
 
-            X = self.__add_conv_branch(X, kernel_size=5, filters=12, name='conv_2')
-            X = tf.layers.max_pooling2d(X, pool_size=2, strides=2, name='max_pool_2')
+            X = self.__add_conv_branch(
+                X, kernel_size=5, filters=12, drop_prob=self.late_drop_prob, name='conv_2')
+            X = tf.layers.max_pooling2d(
+                X, pool_size=2, strides=2, name='max_pool_2')
 
-            X = self.__add_conv_branch(X, kernel_size=5, filters=24, name='conv_3')
-            X = tf.layers.max_pooling2d(X, pool_size=2, strides=2, name='max_pool_3')
+            X = self.__add_conv_branch(
+                X, kernel_size=5, filters=24, drop_prob=self.late_drop_prob, name='conv_3')
+            X = tf.layers.max_pooling2d(
+                X, pool_size=2, strides=2, name='max_pool_3')
 
-            X = self.__add_conv_branch(X, kernel_size=5, filters=36, name='conv_4')
-            X = tf.layers.max_pooling2d(X, pool_size=2, strides=2, name='max_pool_4')
+            X = self.__add_conv_branch(
+                X, kernel_size=5, filters=36, drop_prob=self.late_drop_prob, name='conv_4')
+            X = tf.layers.max_pooling2d(
+                X, pool_size=2, strides=2, name='max_pool_4')
 
-            X = self.__add_conv_branch(X, kernel_size=5, filters=48, name='conv_5')
-            X = tf.layers.max_pooling2d(X, pool_size=2, strides=2, name='max_pool_5')
+            X = self.__add_conv_branch(
+                X, kernel_size=5, filters=48, drop_prob=self.late_drop_prob, name='conv_5')
+            X = tf.layers.max_pooling2d(
+                X, pool_size=2, strides=2, name='max_pool_5')
 
             X = tf.layers.flatten(X, name='conv_flat')
 
-            X = tf.layers.dense(X, units=64, name='fc_layer_1',
-                                kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
-                                bias_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
-                                kernel_regularizer=tf.keras.regularizers.l2(self.reg_coef))
-            X = tf.nn.relu(X, name='fc_act_1')
+            X = tf.layers.dense(
+                X, units=64, name='fc_layer_1',
+                kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
+                bias_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
+                kernel_regularizer=tf.keras.regularizers.l2(self.reg_coef),
+                activation=tf.nn.relu)
 
-            X = tf.layers.dense(X, units=2, name='fc_layer_2',
-                                kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
-                                bias_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
-                                kernel_regularizer=tf.keras.regularizers.l2(self.reg_coef))
+            X = tf.layers.dense(
+                X, units=2, name='fc_layer_2',
+                kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
+                bias_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
+                kernel_regularizer=tf.keras.regularizers.l2(self.reg_coef))
             output = X
 
         self.output = output
 
-    def _spatial_dropout(self, x, drop_prob, name):
+    def __build_spatial_dropout(self, x, drop_prob, name):
         """
         A function for 2D spatial dropout.
         :param x: is a tensor of shape [batch_size, height, width, channels]
@@ -205,13 +221,16 @@ class CNN96Model(CNNModelBase):
         output = x_drop
         return output
 
-    def __add_conv_branch(self, x, kernel_size, filters, name):
+    def __add_conv_branch(self, x, kernel_size, filters, drop_prob, name):
+        seed = CFG.seed
         with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
-            seed = CFG.seed
-            conv_layer = tf.layers.conv2d(x, kernel_size=kernel_size, filters=filters, padding='same', name='conv',
-                                          kernel_initializer=tf.keras.initializers.he_normal(seed=seed),
-                                          kernel_regularizer=tf.keras.regularizers.l2(self.reg_coef))
-            drop_layer = self._spatial_dropout(conv_layer, drop_prob=self.drop_prob, name='dropout')
-            actv_layer = tf.nn.relu(drop_layer, name='activation')
-            output = actv_layer
+            conv2d = tf.layers.conv2d(
+                x, kernel_size=kernel_size, filters=filters, padding='same', name='conv2d',
+                kernel_initializer=tf.keras.initializers.he_normal(seed=seed),
+                kernel_regularizer=tf.keras.regularizers.l2(self.reg_coef),
+                activation=tf.nn.relu)
+            batch_norm = tf.layers.batch_normalization(
+                conv2d, axis=3, training=self.is_train, name='batch_norm')
+            dropped = self.__build_spatial_dropout(batch_norm, drop_prob=drop_prob, name='dropout')
+            output = dropped
         return output

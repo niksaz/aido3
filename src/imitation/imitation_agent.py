@@ -68,7 +68,9 @@ class ImitationAgent:
         # We access the input and output nodes
         self.x = self.graph.get_tensor_by_name('prefix/x:0')
         self.batch_size = self.graph.get_tensor_by_name('prefix/batch_size:0')
-        self.drop_prob = self.graph.get_tensor_by_name('prefix/drop_prob:0')
+        self.early_drop_prob = self.graph.get_tensor_by_name('prefix/early_drop_prob:0')
+        self.late_drop_prob = self.graph.get_tensor_by_name('prefix/late_drop_prob:0')
+        self.is_train = self.graph.get_tensor_by_name('prefix/is_train:0')
         self.y = self.graph.get_tensor_by_name('prefix/ConvNet/fc_layer_2/BiasAdd:0')
 
         with tf.Session(graph=self.graph) as sess:
@@ -84,7 +86,10 @@ class ImitationAgent:
                 feed_dict={
                     self.x: X,
                     self.batch_size: 1,
-                    self.drop_prob: 0.0})
+                    self.early_drop_prob: 0.0,
+                    self.late_drop_prob: 0.0,
+                    self.is_train: False,
+                })
             action = [action[0, 0], action[0, 1]]
 
             return action

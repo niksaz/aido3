@@ -41,14 +41,18 @@ class Trainer:
                 _, c = self.sess.run([model.train_op, model.task_loss],
                                      feed_dict={model.x: Xs,
                                                 model.batch_size: len(Xs),
-                                                model.drop_prob: 0.05,
+                                                model.early_drop_prob: 0.01,
+                                                model.late_drop_prob: 0.01,
+                                                model.is_train: True,
                                                 model.true_output: Ys})
             elif mode == 'test':
                 # train using the batch and calculate the loss
                 c = self.sess.run([model.task_loss],
                                   feed_dict={model.x: Xs,
                                              model.batch_size: len(Xs),
-                                             model.drop_prob: 0.0,
+                                             model.early_drop_prob: 0.0,
+                                             model.late_drop_prob: 0.0,
+                                             model.is_train: False,
                                              model.true_output: Ys})
 
             else:
