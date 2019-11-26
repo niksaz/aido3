@@ -28,11 +28,6 @@ class ImitationAgent:
     def init(self, context: Context):
         print(time.time(), 'init')
         context.info('init()')
-        max_shift = 0
-        for shift in CFG.input_indices:
-            max_shift = max(max_shift, abs(-1 + shift))
-        self.memory_size = max_shift
-        self.imgs = deque(maxlen=self.memory_size)
 
     def on_received_seed(self, data: int):
         print(time.time(), 'on_received_seed')
@@ -50,9 +45,6 @@ class ImitationAgent:
     def compute_action(self, observation):
         print(time.time(), 'compute_action')
         observation = prepare_for_the_model(preprocess_image(observation))
-        self.imgs.append(observation)
-        while len(self.imgs) < self.memory_size:
-            self.imgs.append(observation)
 
         frozen_model_filename = "frozen_graph.pb"
 
@@ -74,11 +66,7 @@ class ImitationAgent:
         self.y = self.graph.get_tensor_by_name('prefix/ConvNet/fc_layer_2/BiasAdd:0')
 
         with tf.Session(graph=self.graph) as sess:
-            X = []
-            for shift in CFG.input_indices:
-                x = self.imgs[-1 + shift]
-                X.append(x)
-            X = np.stack(X, axis=2)
+            X = observation
             X = np.expand_dims(X, axis=0)
 
             action = sess.run(

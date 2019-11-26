@@ -5,12 +5,12 @@ import numpy as np
 from src.utils.config import CFG
 
 
-def preprocess_image(image):
+def preprocess_image(image, cvt_color=None):
     # crop the 1/3 upper part of the image
     new_img = image[int(image.shape[0] / 3):, :, :]
 
-    # transform the color image to grayscale
-    new_img = cv2.cvtColor(new_img[:, :, :], cv2.COLOR_RGB2GRAY)
+    if cvt_color is not None:
+        new_img = cv2.cvtColor(new_img[:, :, :], cvt_color)
 
     # resize the image to the expected size
     new_img = cv2.resize(new_img, (CFG.image_width, CFG.image_height))

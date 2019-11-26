@@ -2,6 +2,7 @@
 
 import logging
 import os
+import time
 
 import numpy as np
 import tensorflow as tf
@@ -27,36 +28,43 @@ class Trainer:
         """
         batch_losses = []
         for i in range(0, len(data_indices), self.batch_size):
-            Xs = []
-            Ys = []
+            time_started = time.time()
+            X = []
+            Y = []
             for index in data_indices[i:i + self.batch_size]:
-                img_input, actions = dataset[index]
-                Xs.append(img_input)
-                Ys.append(actions)
-            Xs = np.array(Xs)
-            Ys = np.array(Ys)
+                x, y = dataset[index]
+                X.append(x)
+                Y.append(y)
+            X = np.array(X)
+            Y = np.array(Y)
+            time_data_loaded = time.time()
 
             if mode == 'train':
                 # train using the batch and calculate the loss
                 _, c = self.sess.run([model.train_op, model.task_loss],
-                                     feed_dict={model.x: Xs,
-                                                model.batch_size: len(Xs),
+                                     feed_dict={model.x: X,
+                                                model.batch_size: len(X),
                                                 model.early_drop_prob: 0.01,
-                                                model.late_drop_prob: 0.01,
+                                                model.late_drop_prob: 0.05,
                                                 model.is_train: True,
-                                                model.true_output: Ys})
+                                                model.true_output: Y})
             elif mode == 'test':
                 # train using the batch and calculate the loss
                 c = self.sess.run([model.task_loss],
-                                  feed_dict={model.x: Xs,
-                                             model.batch_size: len(Xs),
+                                  feed_dict={model.x: X,
+                                             model.batch_size: len(X),
                                              model.early_drop_prob: 0.0,
                                              model.late_drop_prob: 0.0,
                                              model.is_train: False,
-                                             model.true_output: Ys})
+                                             model.true_output: Y})
 
             else:
                 raise NotImplementedError('Unknown mode: {}'.format(mode))
+            time_computation_done = time.time()
+
+            if i == 0 and mode == 'train':
+                logger.info(f'Spent {time_data_loaded - time_started} on data loading')
+                logger.info(f'Spent {time_computation_done - time_data_loaded} on training')
 
             batch_losses.append(c)
             i += self.batch_size
@@ -124,7 +132,7 @@ class Trainer:
                 test_writer.add_summary(man_loss_summary, epoch)
 
                 # periodically print out the learning progress
-                print_inform_losses = (epoch + 1) % (self.epochs // 100) == 0
+                print_inform_losses = (epoch + 1) % max(1, self.epochs // 100) == 0
 
                 # check if it is the best model
                 if best_test_mean_loss is None or best_test_mean_loss > avg_test_loss:

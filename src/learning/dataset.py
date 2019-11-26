@@ -21,9 +21,10 @@ class Dataset:
         for i_start, i_end in boundaries:
             for k in range(i_end - i_start):
                 inputs = []
-                for shift in CFG.input_indices:
-                    input_id = max(i_start, i_start + k + shift)
-                    inputs.append(input_id)
+                shift = 0
+                input_id = max(i_start, i_start + k + shift)
+                inputs.append(input_id)
+
                 index.append(inputs)
         self.data_dir = data_dir
         self.index = index
@@ -32,13 +33,11 @@ class Dataset:
         return len(self.index)
 
     def __getitem__(self, item: int):
-        imgs = []
         ids = self.index[item]
         for i in ids:
             img_filename = os.path.join(self.data_dir, f'{i}.png')
-            img = cv2.imread(img_filename, cv2.IMREAD_GRAYSCALE)
-            imgs.append(img)
-        img_input = np.stack(imgs, axis=2)
+            img = cv2.imread(img_filename, cv2.IMREAD_COLOR)
+            img_input = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img_input = prepare_for_the_model(img_input)
 
         actions_filename = os.path.join(self.data_dir, f'{ids[0]}.npy')

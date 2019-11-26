@@ -91,7 +91,7 @@ def main():
                 done = True
                 break
 
-            observation = preprocess_image(observation)
+            observation = preprocess_image(observation, cv2.COLOR_BGR2RGB)
             episode_samples.append([observation, action, reward, done, info])
 
             if DEBUG:

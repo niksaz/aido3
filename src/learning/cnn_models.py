@@ -15,7 +15,7 @@ class CNNModelBase(ABC):
     def setup_inputs(self):
         # define placeholder variable for input images
         self.x = tf.placeholder(tf.float32,
-                                shape=[None, CFG.image_height, CFG.image_width, len(CFG.input_indices)],
+                                shape=[None, CFG.image_height, CFG.image_width, 3],
                                 name='x')
         self.batch_size = tf.placeholder(tf.int32, shape=(), name='batch_size')
         self.early_drop_prob = tf.placeholder(tf.float32, shape=(), name='early_drop_prob')
@@ -163,8 +163,6 @@ class CNN96Model(CNNModelBase):
         seed = CFG.seed
         with tf.variable_scope('ConvNet', reuse=tf.AUTO_REUSE):
             X = self.x
-            X = tf.layers.batch_normalization(
-                X, axis=3, training=self.is_train, name='normalize')
 
             X = self.__add_conv_branch(
                 X, kernel_size=5, filters=2, drop_prob=self.early_drop_prob, name='conv_1')
@@ -192,6 +190,10 @@ class CNN96Model(CNNModelBase):
                 X, pool_size=2, strides=2, name='max_pool_5')
 
             X = tf.layers.flatten(X, name='conv_flat')
+
+            # Independent-Component (IC) layer
+            # X = tf.layers.batch_normalization(X, axis=1, training=self.is_train, name='flat_batch_norm')
+            # X = tf.nn.dropout(X, rate=self.late_drop_prob, name='flat_dropout')
 
             X = tf.layers.dense(
                 X, units=64, name='fc_layer_1',
@@ -224,13 +226,15 @@ class CNN96Model(CNNModelBase):
     def __add_conv_branch(self, x, kernel_size, filters, drop_prob, name):
         seed = CFG.seed
         with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
+            # Independent-Component (IC) layer
+            batch_norm = tf.layers.batch_normalization(
+                x, axis=3, training=self.is_train, name='batch_norm')
+            dropped = self.__build_spatial_dropout(batch_norm, drop_prob=drop_prob, name='dropout')
+            # Weight+Activation layer
             conv2d = tf.layers.conv2d(
-                x, kernel_size=kernel_size, filters=filters, padding='same', name='conv2d',
+                dropped, kernel_size=kernel_size, filters=filters, padding='same', name='conv2d',
                 kernel_initializer=tf.keras.initializers.he_normal(seed=seed),
                 kernel_regularizer=tf.keras.regularizers.l2(self.reg_coef),
                 activation=tf.nn.relu)
-            batch_norm = tf.layers.batch_normalization(
-                conv2d, axis=3, training=self.is_train, name='batch_norm')
-            dropped = self.__build_spatial_dropout(batch_norm, drop_prob=drop_prob, name='dropout')
-            output = dropped
+            output = conv2d
         return output
