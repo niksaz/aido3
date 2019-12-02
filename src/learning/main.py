@@ -59,15 +59,15 @@ def main() -> None:
 
     # create and train the model
     if CFG.model == 'CNNResidualNetwork':
-        model = CNNResidualNetwork(CFG.regularizer)
+        model = CNNResidualNetwork()
     elif CFG.model == 'CNN160Model':
-        model = CNN160Model(CFG.regularizer)
+        model = CNN160Model()
     elif CFG.model == 'CNN96Model':
-        model = CNN96Model(CFG.regularizer)
+        model = CNN96Model()
     else:
         raise ValueError(f'Unknown model from the config: {format(CFG.model)}')
 
-    trainer = Trainer(CFG.batch_size, CFG.epochs, CFG.lr)
+    trainer = Trainer(CFG.batch_size, CFG.epochs)
     trainer.train(model, model_dir, dataset)
 
     # calculate total training time in minutes

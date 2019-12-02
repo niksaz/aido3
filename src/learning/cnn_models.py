@@ -9,9 +9,6 @@ from src.utils.config import CFG
 
 class CNNModelBase(ABC):
 
-    def __init__(self, reg_coef):
-        self.reg_coef = reg_coef
-
     def setup_inputs(self):
         # define placeholder variable for input images
         self.x = tf.placeholder(tf.float32,
@@ -41,17 +38,12 @@ class CNNModelBase(ABC):
             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
             with tf.control_dependencies(update_ops):
                 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
-                gradients, variables = zip(*optimizer.compute_gradients(self.loss))
-                self.grad_norm = tf.linalg.global_norm(gradients)
-                gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
-                train_op = optimizer.apply_gradients(zip(gradients, variables))
-                self.train_op = train_op
+                self.train_op = optimizer.minimize(self.loss)
 
 
 class CNNResidualNetwork(CNNModelBase):
 
-    def __init__(self, reg_coef):
-        super().__init__(reg_coef)
+    def __init__(self):
         self.setup_inputs()
         self.setup_output()
         self.setup_loss()
@@ -61,14 +53,14 @@ class CNNResidualNetwork(CNNModelBase):
         residual = tf.nn.relu(residual)
         residual = tf.layers.conv2d(residual, filters=size, kernel_size=3, strides=2, padding='same',
                                     kernel_initializer=tf.keras.initializers.he_normal(seed=seed),
-                                    kernel_regularizer=tf.keras.regularizers.l2(self.reg_coef))
+                                    kernel_regularizer=tf.keras.regularizers.l2(CFG.regularizer))
         if dropout:
             residual = tf.nn.dropout(residual, dropout_prob, seed=seed)
         residual = tf.layers.batch_normalization(residual, training=self.is_train)
         residual = tf.nn.relu(residual)
         residual = tf.layers.conv2d(residual, filters=size, kernel_size=3, padding='same',
                                     kernel_initializer=tf.keras.initializers.he_normal(seed=seed),
-                                    kernel_regularizer=tf.keras.regularizers.l2(self.reg_coef))
+                                    kernel_regularizer=tf.keras.regularizers.l2(CFG.regularizer))
         if dropout:
             residual = tf.nn.dropout(residual, dropout_prob, seed=seed)
 
@@ -77,14 +69,14 @@ class CNNResidualNetwork(CNNModelBase):
     def _one_residual(self, x, keep_prob=0.5, seed=None):
         nn = tf.layers.conv2d(x, filters=32, kernel_size=5, strides=2, padding='same',
                               kernel_initializer=tf.keras.initializers.he_normal(seed=seed),
-                              kernel_regularizer=tf.keras.regularizers.l2(self.reg_coef))
+                              kernel_regularizer=tf.keras.regularizers.l2(CFG.regularizer))
         nn = tf.layers.max_pooling2d(nn, pool_size=3, strides=2)
 
         rb_1 = self._residual_block(nn, 32, dropout_prob=keep_prob, seed=seed)
 
         nn = tf.layers.conv2d(nn, filters=32, kernel_size=1, strides=2, padding='same',
                               kernel_initializer=tf.keras.initializers.he_normal(seed=seed),
-                              kernel_regularizer=tf.keras.regularizers.l2(self.reg_coef))
+                              kernel_regularizer=tf.keras.regularizers.l2(CFG.regularizer))
         nn = tf.keras.layers.add([rb_1, nn])
 
         nn = tf.layers.flatten(nn)
@@ -110,8 +102,7 @@ class CNNResidualNetwork(CNNModelBase):
 
 class CNN160Model(CNNModelBase):
 
-    def __init__(self, reg_coef):
-        super().__init__(reg_coef)
+    def __init__(self):
         self.setup_inputs()
         self.setup_output()
         self.setup_loss()
@@ -130,13 +121,13 @@ class CNN160Model(CNNModelBase):
 
             # add 1st fully connected layers to the neural network
             hl_fc_1 = tf.layers.dense(inputs=conv_flat, units=64, name="fc_layer_1",
-                                      kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_coef))
+                                      kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=CFG.regularizer))
             hl_fc_1 = tf.layers.batch_normalization(hl_fc_1, axis=-1, training=self.is_train)
             hl_fc_1 = tf.nn.tanh(hl_fc_1)
 
             # add 2nd fully connected layers to predict the driving commands
             hl_fc_2 = tf.layers.dense(inputs=hl_fc_1, units=2, name="fc_layer_2",
-                                      kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_coef))
+                                      kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=CFG.regularizer))
             hl_fc_2 = tf.nn.tanh(hl_fc_2)
 
             self.output = hl_fc_2
@@ -144,7 +135,7 @@ class CNN160Model(CNNModelBase):
     def __build_conv_block(self, input_layer, kernel_size, filters, name):
         with tf.variable_scope(name):
             conv2d_layer = tf.layers.conv2d(input_layer, kernel_size=kernel_size, filters=filters, padding="same",
-                                            kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_coef))
+                                            kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=CFG.regularizer))
             batch_norm_layer = tf.layers.batch_normalization(conv2d_layer, axis=1, training=self.is_train)
             non_linear_layer = tf.nn.relu(batch_norm_layer)
             max_pool_layer = tf.layers.max_pooling2d(non_linear_layer, pool_size=2, strides=2, padding="same")
@@ -153,8 +144,7 @@ class CNN160Model(CNNModelBase):
 
 class CNN96Model(CNNModelBase):
 
-    def __init__(self, reg_coef):
-        super().__init__(reg_coef)
+    def __init__(self):
         self.setup_inputs()
         self.setup_output()
         self.setup_loss()
@@ -191,22 +181,26 @@ class CNN96Model(CNNModelBase):
 
             X = tf.layers.flatten(X, name='conv_flat')
 
-            # Independent-Component (IC) layer
-            # X = tf.layers.batch_normalization(X, axis=1, training=self.is_train, name='flat_batch_norm')
-            # X = tf.nn.dropout(X, rate=self.late_drop_prob, name='flat_dropout')
+            with tf.variable_scope('IC_fc_layer_1', reuse=tf.AUTO_REUSE):
+                X = tf.layers.batch_normalization(X, axis=1, training=self.is_train, name='batch_norm')
+                X = tf.nn.dropout(X, rate=self.late_drop_prob, name='dropout')
 
             X = tf.layers.dense(
                 X, units=64, name='fc_layer_1',
                 kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
                 bias_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
-                kernel_regularizer=tf.keras.regularizers.l2(self.reg_coef),
+                kernel_constraint=tf.keras.constraints.max_norm(max_value=4, axis=0),
                 activation=tf.nn.relu)
+
+            with tf.variable_scope('IC_fc_layer_2', reuse=tf.AUTO_REUSE):
+                X = tf.layers.batch_normalization(X, axis=1, training=self.is_train, name='batch_norm')
+                X = tf.nn.dropout(X, rate=self.late_drop_prob, name='dropout')
 
             X = tf.layers.dense(
                 X, units=2, name='fc_layer_2',
                 kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
                 bias_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
-                kernel_regularizer=tf.keras.regularizers.l2(self.reg_coef))
+                kernel_constraint=tf.keras.constraints.max_norm(max_value=4, axis=0))
             output = X
 
         self.output = output
@@ -234,7 +228,7 @@ class CNN96Model(CNNModelBase):
             conv2d = tf.layers.conv2d(
                 dropped, kernel_size=kernel_size, filters=filters, padding='same', name='conv2d',
                 kernel_initializer=tf.keras.initializers.he_normal(seed=seed),
-                kernel_regularizer=tf.keras.regularizers.l2(self.reg_coef),
+                kernel_constraint=tf.keras.constraints.max_norm(max_value=4, axis=[0, 1, 2]),
                 activation=tf.nn.relu)
             output = conv2d
         return output

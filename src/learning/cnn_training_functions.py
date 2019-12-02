@@ -13,10 +13,9 @@ logger = logging.getLogger()
 
 
 class Trainer:
-    def __init__(self, batch, epochs, learning_rate):
+    def __init__(self, batch, epochs):
         self.batch_size = batch
         self.epochs = epochs
-        self.learning_rate = learning_rate
         self.sess = None
 
     def __run_epoch_for(self, model, dataset, data_indices, mode):
@@ -93,7 +92,7 @@ class Trainer:
         man_loss_summary.value.add(tag='Loss', simple_value=None)
         saver = tf.train.Saver(max_to_keep=10)
 
-        model.add_train_op(self.learning_rate)
+        model.add_train_op(CFG.learning_rate)
 
         init = tf.global_variables_initializer()
         with tf.Session() as self.sess:

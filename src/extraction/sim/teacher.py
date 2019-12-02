@@ -49,4 +49,4 @@ class PurePursuitExpert:
 
     @staticmethod
     def __get_speed_density_at(x):
-        return stats.norm.pdf(x, 0.0, 1.0)
+        return stats.norm.pdf(x, 0.0, 2.0)

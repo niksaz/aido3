@@ -7,7 +7,6 @@ from typing import List
 import cv2
 import numpy as np
 
-from src.utils.config import CFG
 from src.utils.preprocessing import prepare_for_the_model
 
 
@@ -27,7 +26,7 @@ class Dataset:
 
                 index.append(inputs)
         self.data_dir = data_dir
-        self.index = index
+        self.index = index[::5]
 
     def __len__(self) -> int:
         return len(self.index)

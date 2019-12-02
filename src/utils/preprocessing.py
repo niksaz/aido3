@@ -19,6 +19,7 @@ def preprocess_image(image, cvt_color=None):
 
 
 def prepare_for_the_model(image):
+    image = cv2.cvtColor(image, cv2.COLOR_RGB2YUV)
     image = image.astype(np.float32)
     image = image / 255
     return image

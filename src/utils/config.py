@@ -7,8 +7,8 @@ CFG = edict()
 CFG.train_data_ratio = 0.7
 
 CFG.batch_size = 64
-CFG.epochs = 100
-CFG.lr = 1e-4
+CFG.epochs = 1000
+CFG.learning_rate = 1e-4
 CFG.regularizer = 1e-4
 CFG.seed = 603930
 
