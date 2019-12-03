@@ -1,12 +1,13 @@
 # Author: Mikita Sazanovich
 
+import argparse
 import os
+import pickle
 import shutil
 
+import cv2
 import h5py
 import numpy as np
-import cv2
-import pickle
 
 from src.extraction.sim.env import launch_env
 from src.extraction.sim.helpers import SteeringToWheelVelWrapper
@@ -49,7 +50,6 @@ def save_dataset_as_h5(samples, dataset_dir, dataset_filename):
 
 
 def save_dataset_as_files(samples, boundaries, dataset_dir):
-    dataset_dir = os.path.join(dataset_dir, 'sim')
     if os.path.exists(dataset_dir):
         shutil.rmtree(dataset_dir)
     os.makedirs(dataset_dir)
@@ -66,8 +66,8 @@ def save_dataset_as_files(samples, boundaries, dataset_dir):
         pickle.dump(boundaries, file_out, protocol=2)
 
 
-def main():
-    env = launch_env()
+def generate_samples_on(map_name, samples, boundaries):
+    env = launch_env(map_name=map_name)
 
     # To convert to wheel velocities
     wrapper = SteeringToWheelVelWrapper()
@@ -75,8 +75,6 @@ def main():
     # this is an imperfect demonstrator... I'm sure you can construct a better one.
     expert = PurePursuitExpert(env=env)
 
-    samples = []
-    boundaries = []
     # let's collect our samples
     for episode in range(EPISODES):
         episode_samples = []
@@ -103,11 +101,27 @@ def main():
         samples_end = len(samples)
         boundaries.append([samples_start, samples_end])
 
-        print(f'Finished {episode+1}/{EPISODES} episodes. Total samples: {len(samples)}')
+        print(f'Finished {episode + 1}/{EPISODES} episodes of {map_name}. Total samples: {len(samples)}')
 
     env.close()
 
-    save_dataset_as_files(samples, boundaries, 'data')
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('map_name', type=str, help='The name of the map to gather logs on')  # loop_empty, udem1
+    args = parser.parse_args()
+    return args
+
+
+def main() -> None:
+    args = parse_args()
+
+    samples = []
+    boundaries = []
+
+    generate_samples_on(args.map_name, samples, boundaries)
+
+    save_dataset_as_files(samples, boundaries, os.path.join('data', args.map_name))
 
 
 if __name__ == '__main__':
