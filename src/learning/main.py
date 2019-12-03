@@ -8,7 +8,7 @@ import time
 
 from src.learning.cnn_models import CNNResidualNetwork, CNN160Model, CNN96Model
 from src.learning.cnn_training_functions import Trainer
-from src.learning.dataset import CombinedDataset, Dataset
+from src.learning.dataset import ConcreteTrainingDataset, CombinedTrainingDataset
 from src.utils.config import CFG
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -47,12 +47,12 @@ def main() -> None:
 
     configure_logging(model_dir)
 
-    real_dataset = Dataset(os.path.join('data', 'real'))
-    sim_dataset = Dataset(os.path.join('data', 'sim'))
-    dataset = CombinedDataset([real_dataset, sim_dataset])
-    logger.info(f'Real dataset size is {len(real_dataset)}')
-    logger.info(f'Sim dataset size is {len(sim_dataset)}')
-    logger.info(f'CombinedDataset size is {len(dataset)}')
+    datasets = []
+    for dataset_name in ['duckietown', 'loop_empty', 'udem1']:
+        dataset = ConcreteTrainingDataset(os.path.join('data', dataset_name), CFG.train_data_ratio, CFG.seed)
+        datasets.append(dataset)
+        logger.info(f"{dataset_name} dataset's len is {len(dataset)}")
+    dataset = CombinedTrainingDataset(datasets)
 
     logger.info('Starting training for {} model'.format(args.model_name))
     start_time = time.time()
@@ -72,7 +72,6 @@ def main() -> None:
 
     # calculate total training time in minutes
     training_time = (time.time() - start_time) / 60
-
     logger.info('Finished training of {} in {:.1f} minutes'.format(args.model_name, training_time))
 
 

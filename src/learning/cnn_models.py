@@ -15,6 +15,7 @@ class CNNModelBase(ABC):
                                 shape=[None, CFG.image_height, CFG.image_width, 3],
                                 name='x')
         self.batch_size = tf.placeholder(tf.int32, shape=(), name='batch_size')
+        self.learning_rate = tf.placeholder(tf.float32, shape=(), name='learning_rate')
         self.early_drop_prob = tf.placeholder(tf.float32, shape=(), name='early_drop_prob')
         self.late_drop_prob = tf.placeholder(tf.float32, shape=(), name='late_drop_prob')
         self.is_train = tf.placeholder(tf.bool, shape=(), name='is_train')
@@ -33,11 +34,11 @@ class CNNModelBase(ABC):
             self.reg_loss = tf.reduce_sum(tf.losses.get_regularization_losses())
             self.loss = self.task_loss + self.reg_loss
 
-    def add_train_op(self, learning_rate):
+    def add_train_op(self):
         with tf.name_scope("Optimizer"):
             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
             with tf.control_dependencies(update_ops):
-                optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+                optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
                 self.train_op = optimizer.minimize(self.loss)
 
 

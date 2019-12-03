@@ -7,24 +7,45 @@ import time
 import numpy as np
 import tensorflow as tf
 
+from src.learning.cnn_models import CNNModelBase
+from src.learning.dataset import CombinedTrainingDataset, TrainingDataset
 from src.utils.config import CFG
 
 logger = logging.getLogger()
 
 
 class Trainer:
-    def __init__(self, batch, epochs):
-        self.batch_size = batch
+
+    @staticmethod
+    def __get_learning_rate_for_epoch(epoch):
+        lr = CFG.learning_rate
+        for decay_epoch in CFG.lr_decay_epochs:
+            if epoch >= decay_epoch:
+                lr *= 1e-1
+        return lr
+
+    def __init__(self, batch_size: int, epochs: int):
+        self.batch_size = batch_size
         self.epochs = epochs
         self.sess = None
 
-    def __run_epoch_for(self, model, dataset, data_indices, mode):
+    def __run_epoch_for(self, epoch: int, model: CNNModelBase, dataset: TrainingDataset, mode: str):
         """
         For each epoch extract batches and execute train or test step depending on the mode
 
         :param mode: 'train' or 'test' in order to define if backpropagation is executed as well or not
         :return: mean of losses for the epoch
         """
+        if mode == 'train':
+            data_indices = dataset.get_train_indices()
+            np.random.shuffle(data_indices)
+        elif mode == 'test':
+            data_indices = dataset.get_test_indices()
+            # No need to shuffle in a testing stage
+        else:
+            raise NotImplementedError('Unknown mode: {}'.format(mode))
+        lr = self.__get_learning_rate_for_epoch(epoch)
+
         batch_losses = []
         for i in range(0, len(data_indices), self.batch_size):
             time_started = time.time()
@@ -43,8 +64,9 @@ class Trainer:
                 _, c = self.sess.run([model.train_op, model.task_loss],
                                      feed_dict={model.x: X,
                                                 model.batch_size: len(X),
-                                                model.early_drop_prob: 0.01,
-                                                model.late_drop_prob: 0.05,
+                                                model.learning_rate: lr,
+                                                model.early_drop_prob: CFG.early_drop_prob,
+                                                model.late_drop_prob: CFG.late_drop_prob,
                                                 model.is_train: True,
                                                 model.true_output: Y})
             elif mode == 'test':
@@ -56,32 +78,22 @@ class Trainer:
                                              model.late_drop_prob: 0.0,
                                              model.is_train: False,
                                              model.true_output: Y})
-
             else:
                 raise NotImplementedError('Unknown mode: {}'.format(mode))
             time_computation_done = time.time()
 
-            if i == 0 and mode == 'train':
+            batch_losses.append(c)
+
+            if mode == 'train' and i == 0:
                 logger.info(f'Spent {time_data_loaded - time_started} on data loading')
                 logger.info(f'Spent {time_computation_done - time_data_loaded} on training')
 
-            batch_losses.append(c)
-            i += self.batch_size
-
         return np.mean(batch_losses)
 
-    def train(self, model, model_dir, dataset):
+    def train(self, model: CNNModelBase, model_dir: str, dataset: CombinedTrainingDataset):
         seed = 76
         tf.random.set_random_seed(seed)
         np.random.seed(seed)
-
-        indices = np.arange(len(dataset))
-        np.random.shuffle(indices)
-        train_index_limit = int(len(dataset) * CFG.train_data_ratio)
-        train_indices = indices[:train_index_limit]
-        test_indices = indices[train_index_limit:]
-        logger.info(f'The len of the train data is {len(train_indices)}')
-        logger.info(f'The len of the test data is {len(test_indices)}')
 
         model_path = os.path.join(os.getcwd(), model_dir)
         logs_train_path = os.path.join(model_path, 'train')
@@ -92,7 +104,7 @@ class Trainer:
         man_loss_summary.value.add(tag='Loss', simple_value=None)
         saver = tf.train.Saver(max_to_keep=10)
 
-        model.add_train_op(CFG.learning_rate)
+        model.add_train_op()
 
         init = tf.global_variables_initializer()
         with tf.Session() as self.sess:
@@ -117,16 +129,17 @@ class Trainer:
             best_test_mean_loss = None
 
             for epoch in range(self.epochs):
-                # shuffle the training data each epoch; no need to shuffle the test data
-                np.random.shuffle(train_indices)
-
                 # run train cycle
-                avg_train_loss = self.__run_epoch_for(model, dataset, train_indices, 'train')
+                avg_train_loss = self.__run_epoch_for(epoch, model, dataset, 'train')
                 man_loss_summary.value[0].simple_value = avg_train_loss
                 train_writer.add_summary(man_loss_summary, epoch)
 
-                # run test cycle
-                avg_test_loss = self.__run_epoch_for(model, dataset, test_indices, 'test')
+                # run test cycles for every dataset
+                test_losses = []
+                for separate_dataset in dataset.get_datasets():
+                    avg_test_loss = self.__run_epoch_for(epoch, model, separate_dataset, 'test')
+                    test_losses.append(avg_test_loss)
+                avg_test_loss = np.mean(test_losses)
                 man_loss_summary.value[0].simple_value = avg_test_loss
                 test_writer.add_summary(man_loss_summary, epoch)
 
@@ -142,9 +155,9 @@ class Trainer:
                     print_inform_losses = True
 
                 if print_inform_losses:
-                    logger.info(
-                        'Epoch: {:04d}, mean_train_loss = {:.9f}, mean_test_loss = {:.9f}'.format(
-                            epoch + 1, avg_train_loss, avg_test_loss))
+                    logger.info(f'Epoch: {(epoch + 1):04d}')
+                    logger.info(f'avg_train_loss={avg_train_loss:.9f}, avg_test_loss={avg_test_loss:.9f}')
+                    logger.info(f'test_losses={test_losses}')
 
             # close summary writers
             train_writer.close()

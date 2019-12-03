@@ -33,9 +33,9 @@ def launch_env(id=None):
 
 
 def main():
-    frozen_model_filename = "frozen_graph.pb"
+    frozen_model_path = os.path.join('learned_models', 'frozen_graph.pb')
 
-    graph = load_graph(frozen_model_filename)
+    graph = load_graph(frozen_model_path)
     x = graph.get_tensor_by_name('prefix/x:0')
     batch_size = graph.get_tensor_by_name('prefix/batch_size:0')
     early_drop_prob = graph.get_tensor_by_name('prefix/early_drop_prob:0')
