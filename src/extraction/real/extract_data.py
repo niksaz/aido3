@@ -68,7 +68,6 @@ def save_dataset_as_h5(synch_data, synch_imgs, data_directory, dataset_filename)
 
 
 def save_dataset_as_files(synch_data, synch_imgs, boundaries, dataset_dir):
-    dataset_dir = os.path.join(dataset_dir, 'real')
     if os.path.exists(dataset_dir):
         shutil.rmtree(dataset_dir)
     os.makedirs(dataset_dir)
@@ -220,7 +219,7 @@ def main():
     # the key does not change, we will check if the .h5 file exists before saving the new data, and if it exists we will
     # first remove the previous file ad then save the new data.
 
-    save_dataset_as_files(synch_data, synch_imgs, boundaries, 'data')
+    save_dataset_as_files(synch_data, synch_imgs, boundaries, os.path.join('data', 'duckietown'))
 
 
 if __name__ == "__main__":
