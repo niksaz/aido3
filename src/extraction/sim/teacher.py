@@ -7,6 +7,7 @@ import scipy.stats as stats
 PEAK_VELOCITY = 1.0
 GAIN = 8
 FOLLOWING_DISTANCE = 0.5
+EPS = 1e-9
 
 
 class PurePursuitExpert:
@@ -42,11 +43,6 @@ class PurePursuitExpert:
 
         dot = np.dot(self.env.get_right_vec(), point_vec)
         steering = GAIN * -dot
-        velocity = (PurePursuitExpert.__get_speed_density_at(steering)
-                    / PurePursuitExpert.__get_speed_density_at(0.0)
-                    * PEAK_VELOCITY)
+        velocity = PEAK_VELOCITY / abs(steering + EPS)
+        velocity = min(velocity, 1.0)
         return velocity, steering
-
-    @staticmethod
-    def __get_speed_density_at(x):
-        return stats.norm.pdf(x, 0.0, 2.0)

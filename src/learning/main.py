@@ -54,6 +54,24 @@ def main() -> None:
         logger.info(f"{dataset_name} dataset's len is {len(dataset)}")
     dataset = CombinedTrainingDataset(datasets)
 
+    # code for visualizing the action distribution
+    # import matplotlib.pyplot as plt
+    # import numpy as np
+    #
+    # points = []
+    # for i in range(len(dataset)):
+    #     x, y = dataset[i]
+    #     y = np.clip(y, -1.0, 1.0)
+    #     points.append(y)
+    # points = np.array(points)
+    # plt.scatter(points[:, 0], points[:, 1], s=1)
+    # plt.xlim(-1.5, 1.5)
+    # plt.ylim(-1.5, 1.5)
+    # plt.xlabel('left wheel')
+    # plt.ylabel('right wheel')
+    # plt.savefig('data.png')
+    # exit(0)
+
     logger.info('Starting training for {} model'.format(args.model_name))
     start_time = time.time()
 
@@ -67,7 +85,7 @@ def main() -> None:
     else:
         raise ValueError(f'Unknown model from the config: {format(CFG.model)}')
 
-    trainer = Trainer(CFG.batch_size, CFG.epochs)
+    trainer = Trainer(CFG.batch_size)
     trainer.train(model, model_dir, dataset)
 
     # calculate total training time in minutes

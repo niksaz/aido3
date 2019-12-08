@@ -15,7 +15,6 @@ class CNNModelBase(ABC):
                                 shape=[None, CFG.image_height, CFG.image_width, 3],
                                 name='x')
         self.batch_size = tf.placeholder(tf.int32, shape=(), name='batch_size')
-        self.learning_rate = tf.placeholder(tf.float32, shape=(), name='learning_rate')
         self.early_drop_prob = tf.placeholder(tf.float32, shape=(), name='early_drop_prob')
         self.late_drop_prob = tf.placeholder(tf.float32, shape=(), name='late_drop_prob')
         self.is_train = tf.placeholder(tf.bool, shape=(), name='is_train')
@@ -35,11 +34,37 @@ class CNNModelBase(ABC):
             self.loss = self.task_loss + self.reg_loss
 
     def add_train_op(self):
-        with tf.name_scope("Optimizer"):
+        with tf.name_scope("optimizer"):
             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
             with tf.control_dependencies(update_ops):
-                optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
-                self.train_op = optimizer.minimize(self.loss)
+                self.optimizer = tf.train.AdamOptimizer(
+                    learning_rate=self.get_scheduled_learning_rate(),
+                    beta1=CFG.optimizer_adam_beta1,
+                    beta2=CFG.optimizer_adam_beta2,
+                    epsilon=CFG.optimizer_adam_epsilon)
+                self.train_op = self.optimizer.minimize(
+                    self.loss,
+                    global_step=tf.train.get_or_create_global_step())
+
+    @staticmethod
+    def get_scheduled_learning_rate():
+        lr = CFG.learning_rate
+        warmup_steps = CFG.learning_rate_warmup_steps
+        with tf.name_scope("learning_rate"):
+            warmup_steps = tf.to_float(warmup_steps)
+            step = tf.to_float(tf.train.get_or_create_global_step())
+
+            # Apply linear warmup
+            lr *= tf.minimum(1.0, step / warmup_steps)
+            # Apply rsqrt decay
+            lr *= tf.rsqrt(tf.maximum(step, warmup_steps))
+
+            # Create a named tensor that will be logged using the logging hook.
+            # The full name includes variable and names scope. In this case, the name
+            # is model/get_train_op/learning_rate/learning_rate
+            tf.identity(lr, "learning_rate")
+
+            return lr
 
 
 class CNNResidualNetwork(CNNModelBase):

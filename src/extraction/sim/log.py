@@ -16,8 +16,8 @@ from src.utils.preprocessing import preprocess_image
 
 # Log configuration, you can pick your own values here
 # the more the better? or the smarter the better?
-EPISODES = 200
-STEPS = 512
+EPISODES = 256
+STEPS = 256
 
 DEBUG = False
 
@@ -66,6 +66,11 @@ def save_dataset_as_files(samples, boundaries, dataset_dir):
         pickle.dump(boundaries, file_out, protocol=2)
 
 
+def check_whether_simulator_invalid(info):
+    return ('Simulator' in info
+            and info['Simulator'].get('msg') == 'Stopping the simulator because we are at an invalid pose.')
+
+
 def generate_samples_on(map_name, samples, boundaries):
     env = launch_env(map_name=map_name)
 
@@ -84,9 +89,9 @@ def generate_samples_on(map_name, samples, boundaries):
             # Convert to wheel velocities
             action = wrapper.convert(action)
             observation, reward, done, info = env.step(action)
-            closest_point, _ = env.closest_curve_point(env.cur_pos, env.cur_angle)
-            if closest_point is None:
+            if check_whether_simulator_invalid(info):
                 done = True
+            if done:
                 break
 
             observation = preprocess_image(observation, cv2.COLOR_BGR2RGB)
@@ -96,12 +101,16 @@ def generate_samples_on(map_name, samples, boundaries):
                 env.render()
         env.reset()
 
-        samples_start = len(samples)
-        samples.extend(episode_samples)
-        samples_end = len(samples)
-        boundaries.append([samples_start, samples_end])
+        if len(episode_samples) != STEPS:
+            print('Not including the episode since it has been unsuccessful...')
+        else:
+            samples_start = len(samples)
+            samples.extend(episode_samples)
+            samples_end = len(samples)
+            boundaries.append([samples_start, samples_end])
 
-        print(f'Finished {episode + 1}/{EPISODES} episodes of {map_name}. Total samples: {len(samples)}')
+        print(f'Finished {episode+1}/{EPISODES} episodes of {map_name}.'
+              f'Total samples: {len(samples)}/{(episode+1)*STEPS}')
 
     env.close()
 

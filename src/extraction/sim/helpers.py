@@ -48,9 +48,6 @@ class SteeringToWheelVelWrapper:
         u_r = omega_r * k_r_inv
         u_l = omega_l * k_l_inv
 
-        # limiting output to limit, which is 1.0 for the duckiebot
-        u_r_limited = max(min(u_r, self.limit), -self.limit)
-        u_l_limited = max(min(u_l, self.limit), -self.limit)
-
-        vels = np.array([u_l_limited, u_r_limited])
+        # we are not limiting the values for a better prediction behaviour
+        vels = np.array([u_l, u_r])
         return vels
