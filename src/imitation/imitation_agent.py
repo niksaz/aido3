@@ -29,23 +29,6 @@ class ImitationAgent:
         print(time.time(), 'init')
         context.info('init()')
 
-    def on_received_seed(self, data: int):
-        print(time.time(), 'on_received_seed')
-        np.random.seed(data)
-
-    def on_received_episode_start(self, context: Context, data: EpisodeStart):
-        print(time.time(), 'on_received_episode_start')
-        context.info(f'Starting episode "{data.episode_name}".')
-
-    def on_received_observations(self, data: Duckiebot1Observations):
-        print(time.time(), 'on_received_observations')
-        camera: JPGImage = data.camera
-        self.config.current_image = jpg2rgb(camera.jpg_data)
-
-    def compute_action(self, observation):
-        print(time.time(), 'compute_action')
-        observation = prepare_for_the_model(preprocess_image(observation))
-
         frozen_model_filename = "frozen_graph.pb"
 
         # We use our "load_graph" function to load the graph
@@ -65,22 +48,40 @@ class ImitationAgent:
         self.is_train = self.graph.get_tensor_by_name('prefix/is_train:0')
         self.y = self.graph.get_tensor_by_name('prefix/ConvNet/fc_layer_2/BiasAdd:0')
 
-        with tf.Session(graph=self.graph) as sess:
-            X = observation
-            X = np.expand_dims(X, axis=0)
+        self.session = tf.Session(graph=self.graph)
 
-            action = sess.run(
-                self.y,
-                feed_dict={
-                    self.x: X,
-                    self.batch_size: 1,
-                    self.early_drop_prob: 0.0,
-                    self.late_drop_prob: 0.0,
-                    self.is_train: False,
-                })
-            action = [action[0, 0], action[0, 1]]
+    def on_received_seed(self, data: int):
+        print(time.time(), 'on_received_seed')
+        np.random.seed(data)
 
-            return action
+    def on_received_episode_start(self, context: Context, data: EpisodeStart):
+        print(time.time(), 'on_received_episode_start')
+        context.info(f'Starting episode "{data.episode_name}".')
+
+    def on_received_observations(self, data: Duckiebot1Observations):
+        print(time.time(), 'on_received_observations')
+        camera: JPGImage = data.camera
+        self.config.current_image = jpg2rgb(camera.jpg_data)
+
+    def compute_action(self, observation):
+        print(time.time(), 'compute_action')
+        observation = prepare_for_the_model(preprocess_image(observation))
+
+        X = observation
+        X = np.expand_dims(X, axis=0)
+
+        action = self.session.run(
+            self.y,
+            feed_dict={
+                self.x: X,
+                self.batch_size: 1,
+                self.early_drop_prob: 0.0,
+                self.late_drop_prob: 0.0,
+                self.is_train: False,
+            })
+        action = [action[0, 0], action[0, 1]]
+
+        return action
 
     def on_received_get_commands(self, context: Context):
         print(time.time(), 'on_received_get_commands')
