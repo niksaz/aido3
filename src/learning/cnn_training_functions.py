@@ -84,7 +84,9 @@ class Trainer:
         avg_batch_losses = np.mean(batch_losses)
         return avg_batch_losses, info
 
-    def train(self, model: CNNModelBase, model_dir: str, dataset: CombinedTrainingDataset):
+    def train(self, model: CNNModelBase, model_dir: str, dataset: CombinedTrainingDataset, total_steps: int):
+        logger.info(f'Starting the training for {total_steps} steps.')
+
         seed = 76
         tf.random.set_random_seed(seed)
         np.random.seed(seed)
@@ -124,7 +126,7 @@ class Trainer:
 
             global_step = 0
             epoch = 0
-            while global_step < CFG.steps_to_train_for:
+            while global_step < total_steps:
                 epoch += 1
                 # run train cycle
                 avg_train_loss, info = self.__run_epoch_for(model, dataset, 'train')

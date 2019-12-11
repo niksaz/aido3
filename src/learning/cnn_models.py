@@ -212,10 +212,10 @@ class CNN96Model(CNNModelBase):
                 X = tf.nn.dropout(X, rate=self.late_drop_prob, name='dropout')
 
             X = tf.layers.dense(
-                X, units=64, name='fc_layer_1',
+                X, units=16, name='fc_layer_1',
                 kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
                 bias_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
-                kernel_constraint=tf.keras.constraints.max_norm(max_value=4, axis=0),
+                kernel_constraint=tf.keras.constraints.max_norm(max_value=CFG.max_norm_value, axis=0),
                 activation=tf.nn.relu)
 
             with tf.variable_scope('IC_fc_layer_2', reuse=tf.AUTO_REUSE):
@@ -226,7 +226,7 @@ class CNN96Model(CNNModelBase):
                 X, units=2, name='fc_layer_2',
                 kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
                 bias_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
-                kernel_constraint=tf.keras.constraints.max_norm(max_value=4, axis=0))
+                kernel_constraint=tf.keras.constraints.max_norm(max_value=CFG.max_norm_value, axis=0))
             output = X
 
         self.output = output
@@ -254,7 +254,7 @@ class CNN96Model(CNNModelBase):
             conv2d = tf.layers.conv2d(
                 dropped, kernel_size=kernel_size, filters=filters, padding='same', name='conv2d',
                 kernel_initializer=tf.keras.initializers.he_normal(seed=seed),
-                kernel_constraint=tf.keras.constraints.max_norm(max_value=4, axis=[0, 1, 2]),
+                kernel_constraint=tf.keras.constraints.max_norm(max_value=CFG.max_norm_value, axis=[0, 1, 2]),
                 activation=tf.nn.relu)
             output = conv2d
         return output
