@@ -74,7 +74,7 @@ def save_dataset_as_files(synch_data, synch_imgs, boundaries, dataset_dir):
 
     for i, (info, sample) in enumerate(zip(synch_data, synch_imgs)):
         sample_filename = os.path.join(dataset_dir, '{}.png'.format(i))
-        cv2.imwrite(sample_filename, sample)
+        cv2.imwrite(sample_filename, cv2.cvtColor(sample, cv2.COLOR_RGB2BGR))
         action_filename = os.path.join(dataset_dir, '{}.npy'.format(i))
         action = np.array([info[2], info[3]], dtype=np.float32)
         np.save(action_filename, action)
@@ -154,7 +154,7 @@ def main():
             # img = cv2.imdecode(np_arr, cv2.CV_LOAD_IMAGE_COLOR)
             # print("img", img, img.shape)
             img = cvbridge_object.compressed_imgmsg_to_cv2(img.message)
-            img = preprocess_image(img)
+            img = preprocess_image(img, cvt_color=cv2.COLOR_BGR2RGB)
 
             # hack to get the timestamp of each image in <float 'secs.nsecs'> format instead of <int 'rospy.rostime.Time'>
             temp_timestamp = ext_images[num].timestamp

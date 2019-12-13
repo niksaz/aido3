@@ -56,7 +56,7 @@ def save_dataset_as_files(samples, boundaries, dataset_dir):
 
     for i, sample in enumerate(samples):
         sample_filename = os.path.join(dataset_dir, f'{i}.png')
-        cv2.imwrite(sample_filename, sample[0])
+        cv2.imwrite(sample_filename, cv2.cvtColor(sample[0], cv2.COLOR_RGB2BGR))
         action_filename = os.path.join(dataset_dir, f'{i}.npy')
         action = sample[1].astype(np.float32)
         np.save(action_filename, action)
@@ -94,7 +94,7 @@ def generate_samples_on(map_name, samples, boundaries):
             if done:
                 break
 
-            observation = preprocess_image(observation, cv2.COLOR_BGR2RGB)
+            observation = preprocess_image(observation)
             episode_samples.append([observation, action, reward, done, info])
 
             if DEBUG:

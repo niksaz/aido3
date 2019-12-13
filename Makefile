@@ -13,7 +13,7 @@ docker_extract_data:
 docker_copy_for_learning:
 				mkdir -p data; \
 				docker create -it --name dummy_for_copying extract_container:latest bash; \
-				docker cp dummy_for_copying:/workspace/data/real data/real; \
+				docker cp dummy_for_copying:/workspace/data/duckietown data/duckietown; \
 				docker rm -fv dummy_for_copying;
 
 # ==================== FOR MODEL LEARNING ====================
