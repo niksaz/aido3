@@ -8,8 +8,8 @@ import tensorflow as tf
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
-from src.imitation.graph_utils import load_graph
 from src.extraction.sim.env import launch_env
+from src.learning.cnn_models import load_graph, CNN96Model
 from src.utils.preprocessing import preprocess_image, prepare_for_the_model
 
 
@@ -23,16 +23,9 @@ def parse_args() -> argparse.Namespace:
 def main():
     args = parse_args()
     frozen_model_path = os.path.join('learned_models', 'frozen_graph.pb')
-
     graph = load_graph(frozen_model_path)
-    x = graph.get_tensor_by_name('prefix/x:0')
-    batch_size = graph.get_tensor_by_name('prefix/batch_size:0')
-    early_drop_prob = graph.get_tensor_by_name('prefix/early_drop_prob:0')
-    late_drop_prob = graph.get_tensor_by_name('prefix/late_drop_prob:0')
-    is_train = graph.get_tensor_by_name('prefix/is_train:0')
-    y = graph.get_tensor_by_name('prefix/ConvNet/fc_layer_2/BiasAdd:0')
 
-    with tf.Session(graph=graph) as sess:
+    with tf.Session(graph=graph) as session:
         STEPS = 256
         env = launch_env(map_name=args.map_name)
 
@@ -44,21 +37,17 @@ def main():
                 X = prepare_for_the_model(preprocess_image(observation))
                 X = np.expand_dims(X, axis=0)
 
-                action = sess.run(
-                    y,
-                    feed_dict={
-                        x: X,
-                        batch_size: 1,
-                        early_drop_prob: 0.0,
-                        late_drop_prob: 0.0,
-                        is_train: False,
-                    })
+                action = session.run(
+                    CNN96Model.get_output_node_from_graph(graph),
+                    CNN96Model.create_feed_dict_from_graph(graph, X))
                 action = np.array([action[0, 0], action[0, 1]])
+                action = np.clip(action, -1.0, 1.0)
                 print(f'Taking action: {action}')
 
                 observation, reward, done, info = env.step(action)
                 if done:
                     break
+
         env.close()
 
 

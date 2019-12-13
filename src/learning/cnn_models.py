@@ -7,7 +7,30 @@ import tensorflow as tf
 from src.utils.config import CFG
 
 
+def load_graph(frozen_graph_filename):
+    # We load the protobuf file from the disk and parse it to retrieve the unserialized graph_def
+    with tf.gfile.GFile(frozen_graph_filename, "rb") as f:
+        graph_def = tf.GraphDef()
+        graph_def.ParseFromString(f.read())
+
+    # Then, we import the graph_def into a new Graph and returns it
+    with tf.Graph().as_default() as graph:
+        # The name var will prefix every op/nodes in your graph
+        # Since we load everything in a new graph, this is not needed
+        tf.import_graph_def(graph_def, name="prefix")
+    return graph
+
+
 class CNNModelBase(ABC):
+
+    @abstractmethod
+    def setup_output(self):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def get_output_node_from_graph(graph):
+        pass
 
     def setup_inputs(self):
         # define placeholder variable for input images
@@ -23,9 +46,33 @@ class CNNModelBase(ABC):
         # [None: tensor may hold arbitrary num of velocities, number of omega predictions for each image]
         self.true_output = tf.placeholder(tf.float32, shape=[None, 2], name="true_output")
 
-    @abstractmethod
-    def setup_output(self):
-        pass
+    def create_feed_dict(self, X, early_drop_prob, late_drop_prob, is_train, Y=None):
+        feed_dict = {
+            self.x: X,
+            self.batch_size: len(X),
+            self.early_drop_prob: early_drop_prob,
+            self.late_drop_prob: late_drop_prob,
+            self.is_train: is_train,
+        }
+        if Y is not None:
+            feed_dict[self.true_output] = Y
+        return feed_dict
+
+    @staticmethod
+    def create_feed_dict_from_graph(graph, X):
+        tensor_x = graph.get_tensor_by_name('prefix/x:0')
+        tensor_batch_size = graph.get_tensor_by_name('prefix/batch_size:0')
+        tensor_early_drop_prob = graph.get_tensor_by_name('prefix/early_drop_prob:0')
+        tensor_late_drop_prob = graph.get_tensor_by_name('prefix/late_drop_prob:0')
+        tensor_is_train = graph.get_tensor_by_name('prefix/is_train:0')
+        feed_dict = {
+            tensor_x: X,
+            tensor_batch_size: len(X),
+            tensor_early_drop_prob: 0.0,
+            tensor_late_drop_prob: 0.0,
+            tensor_is_train: False,
+        }
+        return feed_dict
 
     def setup_loss(self):
         with tf.name_scope("Loss"):
@@ -65,107 +112,6 @@ class CNNModelBase(ABC):
             tf.identity(lr, "learning_rate")
 
             return lr
-
-
-class CNNResidualNetwork(CNNModelBase):
-
-    def __init__(self):
-        self.setup_inputs()
-        self.setup_output()
-        self.setup_loss()
-
-    def _residual_block(self, x, size, dropout=False, dropout_prob=0.5, seed=None):
-        residual = tf.layers.batch_normalization(x, training=self.is_train)
-        residual = tf.nn.relu(residual)
-        residual = tf.layers.conv2d(residual, filters=size, kernel_size=3, strides=2, padding='same',
-                                    kernel_initializer=tf.keras.initializers.he_normal(seed=seed),
-                                    kernel_regularizer=tf.keras.regularizers.l2(CFG.regularizer))
-        if dropout:
-            residual = tf.nn.dropout(residual, dropout_prob, seed=seed)
-        residual = tf.layers.batch_normalization(residual, training=self.is_train)
-        residual = tf.nn.relu(residual)
-        residual = tf.layers.conv2d(residual, filters=size, kernel_size=3, padding='same',
-                                    kernel_initializer=tf.keras.initializers.he_normal(seed=seed),
-                                    kernel_regularizer=tf.keras.regularizers.l2(CFG.regularizer))
-        if dropout:
-            residual = tf.nn.dropout(residual, dropout_prob, seed=seed)
-
-        return residual
-
-    def _one_residual(self, x, keep_prob=0.5, seed=None):
-        nn = tf.layers.conv2d(x, filters=32, kernel_size=5, strides=2, padding='same',
-                              kernel_initializer=tf.keras.initializers.he_normal(seed=seed),
-                              kernel_regularizer=tf.keras.regularizers.l2(CFG.regularizer))
-        nn = tf.layers.max_pooling2d(nn, pool_size=3, strides=2)
-
-        rb_1 = self._residual_block(nn, 32, dropout_prob=keep_prob, seed=seed)
-
-        nn = tf.layers.conv2d(nn, filters=32, kernel_size=1, strides=2, padding='same',
-                              kernel_initializer=tf.keras.initializers.he_normal(seed=seed),
-                              kernel_regularizer=tf.keras.regularizers.l2(CFG.regularizer))
-        nn = tf.keras.layers.add([rb_1, nn])
-
-        nn = tf.layers.flatten(nn)
-
-        return nn
-
-    def setup_output(self):
-        seed = CFG.seed
-
-        x_shaped = tf.reshape(self.x, [-1, CFG.image_height, CFG.image_width, 1])
-        model = self._one_residual(x_shaped, seed=seed)
-        model = tf.layers.dense(model, units=64, activation=tf.nn.relu,
-                                kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
-                                bias_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed))
-        model = tf.layers.dense(model, units=32, activation=tf.nn.relu,
-                                kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed),
-                                bias_initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=seed))
-
-        model = tf.layers.dense(model, 2)
-
-        self.output = model
-
-
-class CNN160Model(CNNModelBase):
-
-    def __init__(self):
-        self.setup_inputs()
-        self.setup_output()
-        self.setup_loss()
-
-    def setup_output(self):
-        with tf.variable_scope('ConvNet', reuse=tf.AUTO_REUSE):
-            x_shaped = tf.reshape(self.x, [-1, CFG.image_height, CFG.image_width, 1])
-            x_normed = tf.layers.batch_normalization(x_shaped, axis=1, training=self.is_train)
-
-            conv_layer_block_1 = self.__build_conv_block(x_normed, kernel_size=3, filters=4, name='conv1')
-            conv_layer_block_2 = self.__build_conv_block(conv_layer_block_1, kernel_size=3, filters=4, name='conv2')
-            conv_layer_block_3 = self.__build_conv_block(conv_layer_block_2, kernel_size=3, filters=8, name='conv3')
-            conv_layer_block_4 = self.__build_conv_block(conv_layer_block_3, kernel_size=3, filters=16, name='conv4')
-
-            conv_flat = tf.layers.flatten(conv_layer_block_4)
-
-            # add 1st fully connected layers to the neural network
-            hl_fc_1 = tf.layers.dense(inputs=conv_flat, units=64, name="fc_layer_1",
-                                      kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=CFG.regularizer))
-            hl_fc_1 = tf.layers.batch_normalization(hl_fc_1, axis=-1, training=self.is_train)
-            hl_fc_1 = tf.nn.tanh(hl_fc_1)
-
-            # add 2nd fully connected layers to predict the driving commands
-            hl_fc_2 = tf.layers.dense(inputs=hl_fc_1, units=2, name="fc_layer_2",
-                                      kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=CFG.regularizer))
-            hl_fc_2 = tf.nn.tanh(hl_fc_2)
-
-            self.output = hl_fc_2
-
-    def __build_conv_block(self, input_layer, kernel_size, filters, name):
-        with tf.variable_scope(name):
-            conv2d_layer = tf.layers.conv2d(input_layer, kernel_size=kernel_size, filters=filters, padding="same",
-                                            kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=CFG.regularizer))
-            batch_norm_layer = tf.layers.batch_normalization(conv2d_layer, axis=1, training=self.is_train)
-            non_linear_layer = tf.nn.relu(batch_norm_layer)
-            max_pool_layer = tf.layers.max_pooling2d(non_linear_layer, pool_size=2, strides=2, padding="same")
-            return max_pool_layer
 
 
 class CNN96Model(CNNModelBase):
@@ -230,6 +176,11 @@ class CNN96Model(CNNModelBase):
             output = X
 
         self.output = output
+
+    @staticmethod
+    def get_output_node_from_graph(graph):
+        Y = graph.get_tensor_by_name('prefix/ConvNet/fc_layer_2/BiasAdd:0')
+        return Y
 
     def __build_spatial_dropout(self, x, drop_prob, name):
         """

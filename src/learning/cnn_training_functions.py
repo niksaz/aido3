@@ -52,26 +52,18 @@ class Trainer:
 
             if mode == 'train':
                 # train using the batch and calculate the loss
+                nodes = [model.train_op, model.task_loss, model.optimizer._lr, tf.train.get_global_step()]
                 _, c, lr, global_step = self.sess.run(
-                    [model.train_op, model.task_loss, model.optimizer._lr, tf.train.get_global_step()],
-                    feed_dict={model.x: X,
-                               model.batch_size: len(X),
-                               model.early_drop_prob: CFG.early_drop_prob,
-                               model.late_drop_prob: CFG.late_drop_prob,
-                               model.is_train: True,
-                               model.true_output: Y})
+                    nodes,
+                    model.create_feed_dict(X, CFG.early_drop_prob, CFG.late_drop_prob, True, Y))
                 info['lr'] = lr
                 info['global_step'] = global_step
             elif mode == 'test':
                 # run the batch and calculate the loss
+                nodes = [model.task_loss]
                 c = self.sess.run(
-                    [model.task_loss],
-                    feed_dict={model.x: X,
-                               model.batch_size: len(X),
-                               model.early_drop_prob: 0.0,
-                               model.late_drop_prob: 0.0,
-                               model.is_train: False,
-                               model.true_output: Y})
+                    nodes,
+                    model.create_feed_dict(X, 0.0, 0.0, False, Y))
             else:
                 raise NotImplementedError('Unknown mode: {}'.format(mode))
             time_computation_done = time.time()

@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
 
-from dataclasses import dataclass
-from collections import deque
-
-import tensorflow as tf
-import numpy as np
 import time
+from dataclasses import dataclass
 
+import numpy as np
+import tensorflow as tf
 from aido_schemas import EpisodeStart, protocol_agent_duckiebot1, PWMCommands, Duckiebot1Commands, LEDSCommands, RGB, \
     wrap_direct, Context, Duckiebot1Observations, JPGImage
 
-from src.imitation.graph_utils import load_graph
+from src.learning.cnn_models import load_graph, CNN96Model
 from src.utils.preprocessing import preprocess_image, prepare_for_the_model
-from src.utils.config import CFG
 
 
 @dataclass
@@ -33,21 +30,6 @@ class ImitationAgent:
 
         # We use our "load_graph" function to load the graph
         self.graph = load_graph(frozen_model_filename)
-
-        # To check which operations your network is using
-        # uncomment the following commands:
-        # We can verify that we can access the list of operations in the graph
-        # for op in graph.get_operations():
-        #     print(op.name)
-
-        # We access the input and output nodes
-        self.x = self.graph.get_tensor_by_name('prefix/x:0')
-        self.batch_size = self.graph.get_tensor_by_name('prefix/batch_size:0')
-        self.early_drop_prob = self.graph.get_tensor_by_name('prefix/early_drop_prob:0')
-        self.late_drop_prob = self.graph.get_tensor_by_name('prefix/late_drop_prob:0')
-        self.is_train = self.graph.get_tensor_by_name('prefix/is_train:0')
-        self.y = self.graph.get_tensor_by_name('prefix/ConvNet/fc_layer_2/BiasAdd:0')
-
         self.session = tf.Session(graph=self.graph)
 
     def on_received_seed(self, data: int):
@@ -71,14 +53,8 @@ class ImitationAgent:
         X = np.expand_dims(X, axis=0)
 
         action = self.session.run(
-            self.y,
-            feed_dict={
-                self.x: X,
-                self.batch_size: 1,
-                self.early_drop_prob: 0.0,
-                self.late_drop_prob: 0.0,
-                self.is_train: False,
-            })
+            CNN96Model.get_output_node_from_graph(self.graph),
+            CNN96Model.create_feed_dict_from_graph(self.graph, X))
         action = [action[0, 0], action[0, 1]]
 
         return action

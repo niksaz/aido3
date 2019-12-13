@@ -6,7 +6,7 @@ import os
 import shutil
 import time
 
-from src.learning.cnn_models import CNNResidualNetwork, CNN160Model, CNN96Model
+from src.learning.cnn_models import CNN96Model
 from src.learning.cnn_training_functions import Trainer
 from src.learning.dataset import ConcreteTrainingDataset, CombinedTrainingDataset
 from src.utils.config import CFG
@@ -55,17 +55,9 @@ def main() -> None:
     dataset = CombinedTrainingDataset(datasets)
 
     # create and train the model
-    if CFG.model == 'CNNResidualNetwork':
-        model = CNNResidualNetwork()
-    elif CFG.model == 'CNN160Model':
-        model = CNN160Model()
-    elif CFG.model == 'CNN96Model':
-        model = CNN96Model()
-    else:
-        raise ValueError(f'Unknown model from the config: {format(CFG.model)}')
+    model = CNN96Model()
 
     start_time = time.time()
-
     trainer = Trainer(CFG.batch_size)
     trainer.train(model, model_dir, dataset, CFG.steps_to_train_for)
 

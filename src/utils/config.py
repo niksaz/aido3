@@ -6,7 +6,6 @@ from easydict import EasyDict as edict
 CFG = edict()
 
 # model params
-CFG.model = 'CNN96Model'
 CFG.early_drop_prob = 0.01
 CFG.late_drop_prob = 0.05
 CFG.max_norm_value = 4.0
