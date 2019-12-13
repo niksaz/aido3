@@ -15,7 +15,7 @@ PTS_LIMIT = 1000
 def main():
     plt.figure(figsize=(8, 8))
 
-    dataset_names = ['jetbrains', 'duckietown', 'loop_empty', 'udem1']
+    dataset_names = CFG.dataset_names
     colors = cm.rainbow(np.linspace(0, 1, len(dataset_names)))
     for dataset_name, color in zip(dataset_names, colors):
         dataset = ConcreteTrainingDataset(os.path.join('data', dataset_name), CFG.train_data_ratio, CFG.seed)

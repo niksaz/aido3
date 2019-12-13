@@ -25,4 +25,5 @@ CFG.optimizer_adam_epsilon = 1e-9
 CFG.train_data_ratio = 0.7
 CFG.image_width = 64
 CFG.image_height = 32
+CFG.dataset_names = ['jetbrains', 'duckietown', 'loop_empty', 'udem1']
 CFG.dataset_subsample = 1

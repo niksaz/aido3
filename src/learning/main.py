@@ -48,7 +48,7 @@ def main() -> None:
     configure_logging(model_dir)
 
     datasets = []
-    for dataset_name in ['jetbrains', 'duckietown', 'loop_empty', 'udem1']:
+    for dataset_name in CFG.dataset_names:
         dataset = ConcreteTrainingDataset(os.path.join('data', dataset_name), CFG.train_data_ratio, CFG.seed)
         datasets.append(dataset)
         logger.info(f"{dataset_name} dataset's len is {len(dataset)}")
