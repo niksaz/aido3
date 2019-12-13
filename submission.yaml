@@ -1,4 +1,4 @@
 protocol: aido2_db18_agent-z2
-user-label: "chameleon-8-trio"
+user-label: "4 seasons"
 user-payload: {}
 challenge: ['aido3-LF-sim-validation', 'aido3-LFV-sim-validation', 'aido3-LFVI-sim-validation', 'aido3-LFVI-sim-testing', 'aido3-LFV-sim-testing', 'aido3-LF-sim-testing']
