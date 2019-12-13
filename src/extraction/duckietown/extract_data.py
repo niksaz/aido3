@@ -11,7 +11,7 @@ import cv2
 import rosbag
 import cv_bridge
 from copy import copy
-from src.extraction.real.extract_data_functions import synchronize_data
+from src.extraction.duckietown.extract_data_functions import synchronize_data
 from src.utils.preprocessing import preprocess_image
 
 # A collection of ros messages coming from a single topic.

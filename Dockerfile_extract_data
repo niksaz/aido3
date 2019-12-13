@@ -38,10 +38,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN mkdir /workspace/data
 
 # Download logs
-RUN python -m src.extraction.real.download_logs
+RUN python -m src.extraction.duckietown.download_logs
 
 # Extract data into useable format
-RUN python -m src.extraction.real.extract_data
+RUN python -m src.extraction.duckietown.extract_data
 
 # Remove bagfiles after extracting training data - ! Please adapt if data is still required
 RUN rm -rf data/bag_files
