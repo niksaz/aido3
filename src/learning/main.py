@@ -48,8 +48,9 @@ def main() -> None:
     configure_logging(model_dir)
 
     datasets = []
-    for dataset_name in CFG.dataset_names:
-        dataset = ConcreteTrainingDataset(os.path.join('data', dataset_name), CFG.train_data_ratio, CFG.seed)
+    for dataset_name, dataset_subsample in zip(CFG.dataset_names, CFG.dataset_subsample):
+        dataset = ConcreteTrainingDataset(
+            os.path.join('data', dataset_name), CFG.train_data_ratio, CFG.seed, dataset_subsample)
         datasets.append(dataset)
         logger.info(f"{dataset_name} dataset's len is {len(dataset)}")
     dataset = CombinedTrainingDataset(datasets)

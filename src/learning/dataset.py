@@ -36,7 +36,7 @@ class TrainingDataset(Dataset):
 
 class ConcreteDataset(Dataset):
 
-    def __init__(self, data_dir):
+    def __init__(self, data_dir, dataset_subsample):
         meta_path = os.path.join(data_dir, 'meta.pk')
         with open(meta_path, 'rb') as finput:
             boundaries = pickle.load(finput)
@@ -50,7 +50,7 @@ class ConcreteDataset(Dataset):
 
                 index.append(inputs)
         self.__data_dir = data_dir
-        self.__index = index[::CFG.dataset_subsample]
+        self.__index = index[::dataset_subsample]
         self.__data = []
         for i in range(len(self.__index)):
             self.__data.append(self.__load_data(i))
@@ -76,8 +76,8 @@ class ConcreteDataset(Dataset):
 
 class ConcreteTrainingDataset(ConcreteDataset, TrainingDataset):
 
-    def __init__(self, data_dir: str, train_data_ratio: float, seed: int):
-        super().__init__(data_dir)
+    def __init__(self, data_dir: str, train_data_ratio: float, seed: int, dataset_subsample: int):
+        super().__init__(data_dir, dataset_subsample)
         random_state = np.random.RandomState(seed=seed)
         indices = np.arange(self.__len__())
         random_state.shuffle(indices)
