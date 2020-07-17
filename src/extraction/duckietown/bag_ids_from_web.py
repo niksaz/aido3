@@ -3,6 +3,7 @@
 import requests
 from bs4 import BeautifulSoup
 from typing import List
+from src.extraction.duckietown.config import ROOT_PAGE_URL
 
 
 def extract_ref_elements_for(ref_elements, duckiebot: str) -> List[List[str]]:
@@ -17,8 +18,7 @@ def extract_ref_elements_for(ref_elements, duckiebot: str) -> List[List[str]]:
 
 
 def main():
-    page_url = "http://ipfs.duckietown.org:8080/ipfs/QmUbtwQ3QZKmmz5qTjKM3z8LJjsrKBWLUnnzoE5L4M7y7J/logs"
-    response = requests.get(page_url, allow_redirects=True)
+    response = requests.get(ROOT_PAGE_URL, allow_redirects=True)
     if response.status_code != 200:
         print(f'Unsuccessful downloading: {response.status_code}. Finishing...')
         return 0

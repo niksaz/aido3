@@ -128,8 +128,9 @@ def main():
         print("Extract data for {} file.".format(file))
         try:
             msgs = extract_messages(abs_path, ros_topics_temp)
-        except rosbag.bag.ROSBagException:
+        except rosbag.bag.ROSBagException as ex:
             print("Failed to open {}".format(abs_path))
+            print("Exception: " + str(ex))
             continue
 
             ######## This following part is implementation specific ########
