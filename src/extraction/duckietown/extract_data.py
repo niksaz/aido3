@@ -1,17 +1,14 @@
 #!/usr/bin/env python
 
-import numpy as np
 import pandas as pd
-import h5py
 import os
-import shutil
 import collections
-import pickle
 import cv2
 import rosbag
 import cv_bridge
 from copy import copy
 from src.extraction.duckietown.extract_data_functions import synchronize_data
+from src.extraction.duckietown.dataset_writer import FilesDatasetWriter
 from src.utils.preprocessing import preprocess_image
 
 # A collection of ros messages coming from a single topic.
@@ -44,46 +41,6 @@ def extract_messages(path, requested_topics):
     return extracted_messages
 
 
-def save_dataset_as_h5(synch_data, synch_imgs, data_directory, dataset_filename):
-    if not os.path.exists(data_directory):
-        os.makedirs(data_directory)
-    dataset_name = os.path.join(data_directory, dataset_filename)
-
-    # check if file already exist in the data directory and if yes it is removed before saving the new file
-    if os.path.isfile(dataset_name):
-        os.remove(dataset_name)
-
-    f = h5py.File(dataset_name, 'w')
-    variant = f.create_group('split')
-    group = variant.create_group('mix')
-    group.create_dataset(name='vel_left', data=synch_data[:, 2], compression='gzip')
-    group.create_dataset(name='vel_right', data=synch_data[:, 3], compression='gzip')
-    group.create_dataset(name='bag_ID', data=synch_data[:, 4], compression='gzip')
-    group.create_dataset(name='img_timestamp', data=synch_data[:, 0], compression='gzip')
-    group.create_dataset(name='vel_timestamp', data=synch_data[:, 1], compression='gzip')
-
-    group.create_dataset(name='images', data=synch_imgs[:], compression='gzip')
-
-    print("\nThe total {} dataset points were saved in {} directory.".format(synch_data.shape[0], data_directory))
-
-
-def save_dataset_as_files(synch_data, synch_imgs, boundaries, dataset_dir):
-    if os.path.exists(dataset_dir):
-        shutil.rmtree(dataset_dir)
-    os.makedirs(dataset_dir)
-
-    for i, (info, sample) in enumerate(zip(synch_data, synch_imgs)):
-        sample_filename = os.path.join(dataset_dir, '{}.png'.format(i))
-        cv2.imwrite(sample_filename, cv2.cvtColor(sample, cv2.COLOR_RGB2BGR))
-        action_filename = os.path.join(dataset_dir, '{}.npy'.format(i))
-        action = np.array([info[2], info[3]], dtype=np.float32)
-        np.save(action_filename, action)
-
-    meta_filename = os.path.join(dataset_dir, 'meta.pk')
-    with open(meta_filename, 'wb') as file_out:
-        pickle.dump(boundaries, file_out, protocol=2)
-
-
 def main():
     # define the list of topics that you want to extract
     ros_topics = [
@@ -102,9 +59,7 @@ def main():
     # create a dataframe to store the data for all bag files
     # df_all = pd.DataFrame()
 
-    synch_data = []
-    synch_imgs = []
-    boundaries = []
+    dataset_writer = FilesDatasetWriter(os.path.join('data', 'duckietown'))
 
     for file in os.listdir(bags_directory):
         if not file.endswith(".bag"):
@@ -194,15 +149,12 @@ def main():
         # synchronize data
         print("Starting synchronization of data for {} file.".format(file))
 
-        samples_start = len(synch_data)
-        temp_synch_data, temp_synch_imgs = synchronize_data(df_imgs, df_cmds, bag_ID)
-        synch_data.extend(temp_synch_data)
-        synch_imgs.extend(temp_synch_imgs)
-        samples_end = len(synch_data)
+        synch_data, synch_imgs = synchronize_data(df_imgs, df_cmds, bag_ID)
+        dataset_writer.save_episode(synch_imgs, synch_data)
+        dataset_writer.save_boundaries()
 
-        boundaries.append([samples_start, samples_end])
-
-        print("\nShape of total data: {} , shape of total images: {}\n".format(len(synch_data), len(synch_imgs)))
+        print("\nLen of episode data: {}, len of episode images: {}.".format(len(synch_data), len(synch_imgs)))
+        print("Total samples written: {}.\n".format(dataset_writer.samples_written))
 
     print("Synchronization of all data is finished.\n")
 
@@ -219,8 +171,6 @@ def main():
     # and thus the size of the .h5 file will be double for no reason and without any warning. As a result, here since
     # the key does not change, we will check if the .h5 file exists before saving the new data, and if it exists we will
     # first remove the previous file ad then save the new data.
-
-    save_dataset_as_files(synch_data, synch_imgs, boundaries, os.path.join('data', 'duckietown'))
 
 
 if __name__ == "__main__":

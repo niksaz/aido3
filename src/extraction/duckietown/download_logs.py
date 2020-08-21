@@ -11,13 +11,8 @@ def download_bag_files(urls):
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-    for url in urls:
-        # extract bag_ID from url
-        bag_ID = url
-
-        # extract link of the bag file
-        link = urls[url]
-
+    for bag_ID, link in urls.items():
+        print('Processing {} at the link {}'.format(bag_ID, link))
         # check that a file exists on the defined url
         response = requests.head(link)
         if response.status_code != 200:
