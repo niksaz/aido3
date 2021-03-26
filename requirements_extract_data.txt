@@ -1,5 +1,5 @@
 h5py==2.9.0
-pyyaml==3.11
+pyyaml==5.4
 rospkg==1.1.7
 numpy==1.11.0
 pandas==0.23.0
