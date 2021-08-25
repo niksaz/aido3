@@ -1,4 +1,4 @@
-tensorflow-gpu==1.13.1
+tensorflow-gpu==2.5.1
 tensorboard==1.13.1
 opencv-python==4.1.1.26
 h5py==2.9.0
